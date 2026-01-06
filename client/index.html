@@ -10,25 +10,145 @@
 </head>
 
 <body>
-    <div id="login" class='auth-form-container'>
-        <h1 style="text-align:center; margin-bottom: 20px;">Login</h1>
+    <div id="login" class="auth-form-container active">
+        <div class="auth-logo">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
+            </svg>
+        </div>
+        <h2>Welcome Back</h2>
+        
+        <div id="login-error" class="error-message">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <span id="login-error-text"></span>
+        </div>
+        
         <form id="login-form" method="post">
-            <input type="text" name="username" id="username-input" placeholder="username" />
-            <input type="password" name="password" id="password" placeholder="password" />
-            <button type="submit" style="cursor: pointer; margin-bottom: 10px;">Login</button>
+            <div class="input-group">
+                <label for="username-input">Username</label>
+                <input 
+                    type="text" 
+                    name="username" 
+                    id="username-input" 
+                    placeholder="Enter your username"
+                    autocomplete="username"
+                    required
+                    minlength="3"
+                    maxlength="50"
+                />
+            </div>
+            
+            <div class="input-group">
+                <label for="password">Password</label>
+                <div class="password-input-wrapper">
+                    <input 
+                        type="password" 
+                        name="password" 
+                        id="password" 
+                        placeholder="Enter your password"
+                        autocomplete="current-password"
+                        required
+                        minlength="6"
+                    />
+                    <button type="button" class="password-toggle" aria-label="Toggle password visibility">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <button type="submit" class="submit-btn" id="login-btn">
+                Sign In
+            </button>
         </form>
-        <p>Don't have an account? <a href="#" id="show-register-link">Register here</a></p>
+        
+        <div class="divider">or</div>
+        
+        <p class="switch-text">
+            Don't have an account? <a href="#" id="show-register-link">Create one</a>
+        </p>
     </div>
 
     <div id="register" class="auth-form-container">
-        <h1 style="text-align:center; margin-bottom: 20px;">Register</h1>
+        <div class="auth-logo">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
+            </svg>
+        </div>
+        <h2>Create Account</h2>
+        
+        <div id="register-error" class="error-message">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <span id="register-error-text"></span>
+        </div>
+        
+        <div id="register-success" class="success-message">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <span>Account created successfully! Redirecting to login...</span>
+        </div>
+        
         <form id="register-form" method="post">
-            <input type="text" name="username" id="register-username" placeholder="username" />
-            <input type="password" name="password" id="register-password" placeholder="password" />
-            <button type="submit" style="cursor:pointer; margin-bottom: 10px;">Register</button>
+            <div class="input-group">
+                <label for="register-username">Username</label>
+                <input 
+                    type="text" 
+                    name="username" 
+                    id="register-username" 
+                    placeholder="Choose a username"
+                    autocomplete="username"
+                    required
+                    minlength="3"
+                    maxlength="50"
+                    pattern="^[a-zA-Z0-9_]+$"
+                />
+            </div>
+            
+            <div class="input-group">
+                <label for="register-password">Password</label>
+                <div class="password-input-wrapper">
+                    <input 
+                        type="password" 
+                        name="password" 
+                        id="register-password" 
+                        placeholder="Create a password"
+                        autocomplete="new-password"
+                        required
+                        minlength="6"
+                        maxlength="128"
+                    />
+                    <button type="button" class="password-toggle" aria-label="Toggle password visibility">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
+                <span class="input-hint">Minimum 6 characters</span>
+            </div>
+            
+            <button type="submit" class="submit-btn" id="register-btn">
+                Create Account
+            </button>
         </form>
-
-        <p>Already have an account? <a href="#" id="show-login-link">Login here</a> </p>
+        
+        <div class="divider">or</div>
+        
+        <p class="switch-text">
+            Already have an account? <a href="#" id="show-login-link">Sign in</a>
+        </p>
     </div>
 
     <div id="layout">
@@ -71,50 +191,114 @@
     <script>
         const loginView = document.querySelector("#login");
         const registerView = document.querySelector("#register");
-        const chatView = document.querySelector("#layout")
+        const chatView = document.querySelector("#layout");
 
         const loginForm = document.querySelector('#login-form');
         const registerForm = document.querySelector('#register-form');
-        const chatForm = document.querySelector('#chat-form')
+        const chatForm = document.querySelector('#chat-form');
+        
+        const loginError = document.getElementById('login-error');
+        const loginErrorText = document.getElementById('login-error-text');
+        const registerError = document.getElementById('register-error');
+        const registerErrorText = document.getElementById('register-error-text');
+        const registerSuccess = document.getElementById('register-success');
+
+        // Password toggle functionality
+        document.querySelectorAll('.password-toggle').forEach(button => {
+            button.addEventListener('click', () => {
+                const input = button.parentElement.querySelector('input');
+                const isPassword = input.type === 'password';
+                input.type = isPassword ? 'text' : 'password';
+                
+                // Update icon
+                button.innerHTML = isPassword
+                    ? `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                        <line x1="1" y1="1" x2="23" y2="23"></line>
+                       </svg>`
+                    : `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                       </svg>`;
+            });
+        });
+
+        function showError(element, textElement, message) {
+            textElement.textContent = message;
+            element.classList.add('visible');
+            element.closest('.auth-form-container').classList.add('shake');
+            setTimeout(() => {
+                element.closest('.auth-form-container').classList.remove('shake');
+            }, 400);
+        }
+
+        function hideError(element) {
+            element.classList.remove('visible');
+        }
+
+        function setButtonLoading(button, loading) {
+            if (loading) {
+                button.disabled = true;
+                button.dataset.originalText = button.textContent;
+                button.textContent = 'Please wait...';
+            } else {
+                button.disabled = false;
+                button.textContent = button.dataset.originalText || button.textContent;
+            }
+        }
 
         loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const usernameInput = loginForm.querySelector('input[name="username"]')
-            const passwordInput = loginForm.querySelector('input[name="password"]')
-            Login(usernameInput.value, passwordInput.value);
-        })
+            hideError(loginError);
+            const usernameInput = loginForm.querySelector('input[name="username"]');
+            const passwordInput = loginForm.querySelector('input[name="password"]');
+            const submitBtn = document.getElementById('login-btn');
+            setButtonLoading(submitBtn, true);
+            Login(usernameInput.value, passwordInput.value).finally(() => {
+                setButtonLoading(submitBtn, false);
+            });
+        });
 
         registerForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const usernameInput = registerForm.querySelector('input[name="username"]')
-            const passwordInput = registerForm.querySelector('input[name="password"]')
-            Register(usernameInput.value, passwordInput.value);
-        })
+            hideError(registerError);
+            registerSuccess.classList.remove('visible');
+            const usernameInput = registerForm.querySelector('input[name="username"]');
+            const passwordInput = registerForm.querySelector('input[name="password"]');
+            const submitBtn = document.getElementById('register-btn');
+            setButtonLoading(submitBtn, true);
+            Register(usernameInput.value, passwordInput.value).finally(() => {
+                setButtonLoading(submitBtn, false);
+            });
+        });
 
-        const showLoginLink = document.getElementById('show-login-link')
-        const showRegisterLink = document.getElementById('show-register-link')
-
-        // ...existing code...
+        const showLoginLink = document.getElementById('show-login-link');
+        const showRegisterLink = document.getElementById('show-register-link');
 
         showLoginLink.addEventListener('click', (e) => {
             e.preventDefault();
+            hideError(registerError);
+            registerSuccess.classList.remove('visible');
+            registerView.classList.remove('active');
             registerView.style.display = 'none';
+            loginView.classList.add('active');
             loginView.style.display = 'block';
-        })
+        });
 
         showRegisterLink.addEventListener('click', (e) => {
             e.preventDefault();
+            hideError(loginError);
+            loginView.classList.remove('active');
             loginView.style.display = 'none';
+            registerView.classList.add('active');
             registerView.style.display = 'block';
-        })
-
-        // ...existing code...
+        });
 
         let socket;
         const isProduction = window.location.hostname !== 'localhost';
         const wsProtocol = isProduction ? 'wss' : 'ws';
         const apiProtocol = isProduction ? 'https' : 'http';
-        const serverHost = isProduction ? 'websocket-chat-server-ptfw.onrender.com' : 'localhost:8080'; // Update if needed
+        const serverHost = isProduction ? 'websocket-chat-server-ptfw.onrender.com' : 'localhost:8080';
         let username = "";
         let token = "";
         let shouldReconnect = true;
@@ -122,26 +306,23 @@
         const statusDot = document.getElementById("status-dot");
         const statusText = document.getElementById("status-text");
         const userList = document.getElementById("userList");
-        const connectionStatus =
-            document.getElementById("connection-status");
+        const connectionStatus = document.getElementById("connection-status");
         const messageBox = document.getElementById("message-box");
         const sendButton = document.getElementById("send");
-        const logout =
-            document.getElementById("logout");
+        const logout = document.getElementById("logout");
 
         let reconnectionInterval = 5000;
         let maxReconnectionInterval = 30000;
 
         function connect(token, username) {
             const wsUrl = `${wsProtocol}://${serverHost}?token=${token}`;
-            console.log('Attempting to connect to:', wsUrl); // Add this
-            socket = new WebSocket(wsUrl)
+            console.log('Attempting to connect to:', wsUrl);
+            socket = new WebSocket(wsUrl);
 
             socket.onopen = () => {
                 console.log("Connected to the websocket server");
                 reconnectionInterval = 5000;
                 setStatus(true);
-
                 currentUser.textContent = username;
             };
 
@@ -171,9 +352,7 @@
                         const meta = document.createElement("span");
                         meta.className = "meta";
                         const who = msg.username ?? "Unknown";
-                        const when = msg.timestamp
-                            ? ` • ${msg.timestamp}`
-                            : "";
+                        const when = msg.timestamp ? ` • ${msg.timestamp}` : "";
                         meta.textContent = `${who}${when}`;
                         li.appendChild(meta);
                     }
@@ -186,26 +365,20 @@
             socket.onerror = (error) => {
                 console.log("Error", error);
                 setStatus(false);
-                statusText.textContent = "Connection error"
+                statusText.textContent = "Connection error";
             };
 
             socket.onclose = () => {
-                console.log(
-                    `Websocket disconnected. Reconnecting in ${reconnectionInterval / 1000
-                    }s...`,
-                );
+                console.log(`Websocket disconnected. Reconnecting in ${reconnectionInterval / 1000}s...`);
                 setStatus(false);
-                statusText.textContent = 'Reconnecting...'
+                statusText.textContent = 'Reconnecting...';
 
                 if (shouldReconnect) {
                     setTimeout(() => {
                         connect(token, username);
                     }, reconnectionInterval);
 
-                    reconnectionInterval = Math.min(
-                        reconnectionInterval * 2,
-                        maxReconnectionInterval,
-                    );
+                    reconnectionInterval = Math.min(reconnectionInterval * 2, maxReconnectionInterval);
                 }
             };
         }
@@ -214,119 +387,110 @@
             try {
                 const response = await fetch(`${apiProtocol}://${serverHost}/logout`, {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ token }),
-                })
+                });
 
                 if (!response.ok) {
                     throw new Error("Logout Failed");
                 }
 
-                alert("User logout successfully")
-
                 shouldReconnect = false;
-
                 if (socket) {
                     socket.close();
                 }
 
-                token = ""
-                username = ""
+                token = "";
+                username = "";
 
-                chatView.style.display = 'none'
-                loginView.style.display = 'block'
+                chatView.style.display = 'none';
+                loginView.style.display = 'block';
+                loginView.classList.add('active');
 
             } catch (error) {
-                alert('Logout error: ', error.message)
+                console.error('Logout error:', error.message);
             }
         }
 
-        async function Register(username, password) {
+        async function Register(usernameValue, password) {
             try {
                 const response = await fetch(`${apiProtocol}://${serverHost}/register`, {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({ username, password }),
-                })
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username: usernameValue, password }),
+                });
 
-                const data = await response.json()
+                const data = await response.json();
 
                 if (response.ok) {
-                    alert(`Registration successfull for! Please log in`)
-                    registerView.style.display = 'none'
-                    loginView.style.display = 'block'
+                    registerSuccess.classList.add('visible');
+                    registerForm.reset();
+                    
+                    setTimeout(() => {
+                        registerSuccess.classList.remove('visible');
+                        registerView.style.display = 'none';
+                        registerView.classList.remove('active');
+                        loginView.style.display = 'block';
+                        loginView.classList.add('active');
+                        document.getElementById('username-input').value = usernameValue;
+                    }, 2000);
+                } else {
+                    showError(registerError, registerErrorText, data.message || 'Registration failed');
                 }
-                else {
-                    alert(`Registration failed: ${data.message}`)
-                }
-            }
-            catch (error) {
-                console.log('Registration error:  ', error);
-                alert("Registration error please try again later");
+            } catch (error) {
+                console.log('Registration error:', error);
+                showError(registerError, registerErrorText, 'Connection error. Please try again.');
             }
         }
 
-        async function Login(username, password) {
+        async function Login(usernameValue, password) {
             try {
                 const response = await fetch(`${apiProtocol}://${serverHost}/login`, {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ username, password }),
-                })
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username: usernameValue, password }),
+                });
 
                 if (!response.ok) {
-                    throw new Error('Invalid username or passsword')
+                    const data = await response.json();
+                    throw new Error(data.message || 'Invalid username or password');
                 }
 
-                const data = await response.json()
+                const data = await response.json();
 
-                token = data.token
-                username = username
-
+                token = data.token;
+                username = usernameValue;
                 shouldReconnect = true;
 
-                loginView.style.display = 'none'
-                registerView.style.display = 'none'
-                document.getElementById('layout').style.display = 'flex'
+                loginView.style.display = 'none';
+                loginView.classList.remove('active');
+                registerView.style.display = 'none';
+                document.getElementById('layout').style.display = 'flex';
 
-                connect(token, username)
+                connect(token, username);
             } catch (error) {
-                statusText.textContent = `Login Failed: ${error.message}`
-                setStatus(false)
+                showError(loginError, loginErrorText, error.message);
             }
-
         }
 
         const setStatus = (connected) => {
             statusDot.classList.toggle("connected", connected);
             statusDot.classList.toggle("disconnected", !connected);
-            statusText.textContent = connected
-                ? "Connected"
-                : "Reconnecting";
-
+            statusText.textContent = connected ? "Connected" : "Reconnecting";
             messageBox.disabled = !connected;
             sendButton.disabled = !connected;
-
             chatForm.style.opacity = connected ? 1 : 0.5;
         };
 
         logout.addEventListener("click", () => {
             if (socket && socket.readyState === WebSocket.OPEN) {
-                Logout(token)
+                Logout(token);
             }
         });
 
         function updateUserList(users) {
             userList.innerHTML = "";
-
-            // use set to ensure unique usernames
-            const uniqueUsers = [...new Set(users)]
+            const uniqueUsers = [...new Set(users)];
 
             uniqueUsers.forEach((user) => {
                 if (user !== "Guest") {
@@ -344,7 +508,7 @@
                     }
                     userList.appendChild(li);
                 }
-            })
+            });
         }
 
         chatForm.addEventListener("submit", (e) => {

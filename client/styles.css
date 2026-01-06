@@ -330,97 +330,263 @@ h1 {
     font-size: 13px;
 }
 
-#login {
-    display: block;
-}
-
+#login,
 #register {
     display: none;
 }
 
-#login form {
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-}
-
-#register form {
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
+#login.active {
+    display: block;
 }
 
 .auth-form-container {
-    width: min(300px, 90vw);
-    background: linear-gradient(180deg, var(--card), var(--elev));
+    width: min(400px, 90vw);
     border: 1px solid var(--border);
-    border-radius: 18px;
-    box-shadow: var(--shadow);
-    padding: 28px 32px;
+    border-radius: 24px;
+    padding: 40px 36px;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 40px;
+    position: relative;
+    overflow: hidden;
+}
+
+.auth-form-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
 }
 
 .auth-form-container h2 {
     text-align: center;
-    font-size: 24px;
-    margin: 0 0 10px;
+    font-size: 28px;
+    margin: 0;
     color: var(--text);
-    font-weight: 700;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+.auth-form-container .subtitle {
+    text-align: center;
+    font-size: 14px;
+    color: var(--muted);
+    margin: -16px 0 8px;
 }
 
 .auth-form-container form {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 20px;
+}
+
+.auth-form-container .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.auth-form-container .input-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
 }
 
 .auth-form-container input {
-    padding: 12px 14px;
-    border: 1px solid var(--border);
-    background: var(--card);
+    padding: 14px 16px;
+    border: 2px solid var(--border);
+    background: var(--bg);
     color: var(--text);
-    border-radius: 10px;
+    border-radius: 12px;
     font-size: 15px;
     outline: none;
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
+}
+
+.auth-form-container input::placeholder {
+    color: var(--muted);
+    opacity: 0.7;
+}
+
+.auth-form-container input:hover {
+    border-color: color-mix(in srgb, var(--border), var(--primary) 30%);
 }
 
 .auth-form-container input:focus {
     border-color: var(--primary);
     box-shadow: 0 0 0 4px var(--focus);
+    background: var(--card);
 }
 
-.auth-form-container button {
-    height: 44px;
-    background: linear-gradient(180deg, var(--primary), var(--primary-600));
+.auth-form-container .password-input-wrapper {
+    position: relative;
+}
+
+.auth-form-container .password-input-wrapper input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.auth-form-container .password-toggle {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease;
+}
+
+.auth-form-container .password-toggle:hover {
+    color: var(--primary);
+}
+
+.auth-form-container .submit-btn {
+    height: 52px;
+    background: #3b82f6;
     color: white;
     border: none;
-    border-radius: 10px;
+    border-radius: 12px;
     cursor: pointer;
     font-weight: 700;
     font-size: 16px;
-    transition: filter 0.15s ease;
+    letter-spacing: 0.3px;
+    transition: all 0.2s ease;
+    margin-top: 8px;
 }
 
-.auth-form-container button:hover {
-    filter: brightness(1.1);
+.auth-form-container .submit-btn:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.05);
 }
 
-.auth-form-container p {
+.auth-form-container .submit-btn:active {
+    transform: translateY(0);
+}
+
+.auth-form-container .submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.auth-form-container .divider {
+    display: flex;
+    align-items: center;
+    gap: 26px;
+    margin: 10px;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.auth-form-container .divider::before,
+.auth-form-container .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+.auth-form-container .switch-text {
     text-align: center;
     font-size: 14px;
     color: var(--muted);
     margin: 0;
 }
 
-.auth-form-container a {
+.auth-form-container .switch-text a {
     color: var(--primary);
     text-decoration: none;
     font-weight: 600;
+    transition: all 0.2s ease;
 }
 
-.auth-form-container a:hover {
+.auth-form-container .switch-text a:hover {
     text-decoration: underline;
+    color: var(--primary-600);
+}
+
+.auth-form-container .error-message {
+    background: color-mix(in srgb, var(--danger), transparent 85%);
+    border: 1px solid color-mix(in srgb, var(--danger), transparent 50%);
+    color: var(--danger);
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    display: none;
+    align-items: center;
+    gap: 10px;
+}
+
+.auth-form-container .error-message.visible {
+    display: flex;
+}
+
+.auth-form-container .success-message {
+    background: color-mix(in srgb, var(--success), transparent 85%);
+    border: 1px solid color-mix(in srgb, var(--success), transparent 50%);
+    color: var(--success);
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    display: none;
+    align-items: center;
+    gap: 10px;
+}
+
+.auth-form-container .success-message.visible {
+    display: flex;
+}
+
+.auth-form-container .input-hint {
+    font-size: 12px;
+    color: var(--muted);
+    margin: 1px 4px;
+}
+
+.auth-logo {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 8px;
+}
+
+.auth-logo svg {
+    width: 56px;
+    height: 56px;
+    color: var(--primary);
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-8px); }
+    40%, 80% { transform: translateX(8px); }
+}
+
+.auth-form-container.shake {
+    animation: shake 0.4s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.auth-form-container {
+    animation: fadeIn 0.3s ease-out;
 }
