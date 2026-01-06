@@ -181,10 +181,12 @@ app.post("/register", async (req, res) => {
             });
         }
 
-        logger.error(
-            "Registration error: ",
-            error instanceof Error ? error.message : error,
-        );
+        // Add more detailed logging
+        logger.error("Registration error details:", {
+            message: error instanceof Error ? error.message : error,
+            stack: error instanceof Error ? error.stack : undefined,
+            code: error instanceof Error && "code" in error ? error.code : undefined
+        });
         res.status(500).json({ message: "Internal server error" });
     }
 });
