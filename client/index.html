@@ -4,297 +4,278 @@
 
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Real Time Chat Application</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="description" content="Real-time chat over WebSockets with JWT authentication." />
+    <title>Realtime Chat</title>
     <link rel="stylesheet" href="styles.css" />
+    <link rel="icon"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237c5cff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8.6 12a.4.4 0 1 1-.8 0 .4.4 0 0 1 .8 0Z'/%3E%3Cpath d='M12.7 12a.4.4 0 1 1-.8 0 .4.4 0 0 1 .8 0Z'/%3E%3Cpath d='M16.8 12a.4.4 0 1 1-.8 0 .4.4 0 0 1 .8 0Z'/%3E%3Cpath d='M21 12c0 4.6-4 8.3-9 8.3a9.8 9.8 0 0 1-2.6-.3 6 6 0 0 1-3 1.9 4.5 4.5 0 0 0 1-2 5.7 5.7 0 0 1-.5-1.3A8.3 8.3 0 0 1 3 12c0-4.6 4-8.3 9-8.3s9 3.7 9 8.3Z'/%3E%3C/svg%3E" />
 </head>
 
 <body>
-    <div id="login" class="auth-form-container active">
-        <div class="auth-logo">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
-            </svg>
-        </div>
-        <h2>Welcome Back</h2>
-        
-        <div id="login-error" class="error-message">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="8" x2="12" y2="12"></line>
-                <line x1="12" y1="16" x2="12.01" y2="16"></line>
-            </svg>
-            <span id="login-error-text"></span>
-        </div>
-        
-        <form id="login-form" method="post">
-            <div class="input-group">
-                <label for="username-input">Username</label>
-                <input 
-                    type="text" 
-                    name="username" 
-                    id="username-input" 
-                    placeholder="Enter your username"
-                    autocomplete="username"
-                    required
-                    minlength="3"
-                    maxlength="50"
-                />
+    <!-- ================= Auth ================= -->
+
+    <div class="auth-wrap">
+        <div id="login" class="auth-form-container active">
+            <div class="auth-logo" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path
+                        d="M8.6 12a.4.4 0 1 1-.8 0 .4.4 0 0 1 .8 0Zm4.1 0a.4.4 0 1 1-.8 0 .4.4 0 0 1 .8 0Zm4.1 0a.4.4 0 1 1-.8 0 .4.4 0 0 1 .8 0Z" />
+                    <path
+                        d="M21 12c0 4.6-4 8.3-9 8.3a9.8 9.8 0 0 1-2.6-.3 6 6 0 0 1-3 1.9 4.5 4.5 0 0 0 1-2 5.7 5.7 0 0 1-.5-1.3A8.3 8.3 0 0 1 3 12c0-4.6 4-8.3 9-8.3s9 3.7 9 8.3Z" />
+                </svg>
             </div>
-            
-            <div class="input-group">
-                <label for="password">Password</label>
-                <div class="password-input-wrapper">
-                    <input 
-                        type="password" 
-                        name="password" 
-                        id="password" 
-                        placeholder="Enter your password"
-                        autocomplete="current-password"
-                        required
-                        minlength="6"
-                    />
-                    <button type="button" class="password-toggle" aria-label="Toggle password visibility">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                            <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                    </button>
+
+            <div class="auth-head">
+                <h2>Welcome back</h2>
+                <p class="subtitle">Sign in to rejoin the conversation.</p>
+            </div>
+
+            <div id="login-error" class="error-message" role="alert" aria-live="assertive">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <span id="login-error-text"></span>
+            </div>
+
+            <form id="login-form" method="post" novalidate>
+                <div class="input-group">
+                    <label for="username-input">Username</label>
+                    <input type="text" name="username" id="username-input" placeholder="Enter your username"
+                        autocomplete="username" autocapitalize="none" spellcheck="false" required minlength="3" maxlength="50"
+                        pattern="[a-zA-Z0-9_]+" />
                 </div>
-            </div>
-            
-            <button type="submit" class="submit-btn" id="login-btn">
-                Sign In
-            </button>
-        </form>
-        
-        <div class="divider">or</div>
-        
-        <p class="switch-text">
-            Don't have an account? <a href="#" id="show-register-link">Create one</a>
-        </p>
-    </div>
 
-    <div id="register" class="auth-form-container">
-        <div class="auth-logo">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
-            </svg>
-        </div>
-        <h2>Create Account</h2>
-        
-        <div id="register-error" class="error-message">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="8" x2="12" y2="12"></line>
-                <line x1="12" y1="16" x2="12.01" y2="16"></line>
-            </svg>
-            <span id="register-error-text"></span>
-        </div>
-        
-        <div id="register-success" class="success-message">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                <polyline points="22 4 12 14.01 9 11.01"></polyline>
-            </svg>
-            <span>Account created successfully! Redirecting to login...</span>
-        </div>
-        
-        <form id="register-form" method="post">
-            <div class="input-group">
-                <label for="register-username">Username</label>
-                <input 
-                    type="text" 
-                    name="username" 
-                    id="register-username" 
-                    placeholder="Choose a username"
-                    autocomplete="username"
-                    required
-                    minlength="3"
-                    maxlength="50"
-                    pattern="^[a-zA-Z0-9_]+$"
-                />
-            </div>
-            
-            <div class="input-group">
-                <label for="register-password">Password</label>
-                <div class="password-input-wrapper">
-                    <input 
-                        type="password" 
-                        name="password" 
-                        id="register-password" 
-                        placeholder="Create a password"
-                        autocomplete="new-password"
-                        required
-                        minlength="6"
-                        maxlength="128"
-                    />
-                    <button type="button" class="password-toggle" aria-label="Toggle password visibility">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                            <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                    </button>
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <div class="password-input-wrapper">
+                        <input type="password" name="password" id="password" placeholder="Enter your password"
+                            autocomplete="current-password" required minlength="6" />
+                        <button type="button" class="password-toggle" aria-label="Show password"
+                            aria-pressed="false">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                                aria-hidden="true">
+                                <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
+                                <circle cx="12" cy="12" r="2.6" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
-                <span class="input-hint">Minimum 6 characters</span>
-            </div>
-            
-            <button type="submit" class="submit-btn" id="register-btn">
-                Create Account
-            </button>
-        </form>
-        
-        <div class="divider">or</div>
-        
-        <p class="switch-text">
-            Already have an account? <a href="#" id="show-login-link">Sign in</a>
-        </p>
-    </div>
 
-    <div id="layout">
-        <div class="header">
-            <h1>Real Time Chat Application</h1>
-            <div style="display: flex; gap: 12px; align-items: center;">
-                <div class="status" aria-live="polite">
-                    <span id="connection-status"></span>
-                    <span id="status-dot" class="dot"></span>
-                    <span id="status-text">Connecting…</span>
-                </div>
-                <button id="logout">Logout</button>
-            </div>
-        </div>
-
-        <div id="inner-layout">
-            <div id="username">
-                <h2>Me</h2>
-                <p id="currentUser">Not set</p>
-                <h2>Connected users</h2>
-                <ul id="userList"></ul>
-            </div>
-
-            <form id="chat-form">
-                <label for="message-box">Type your message</label>
-                <input id="message-box" placeholder="Write a message and press Enter…" type="text" required
-                    autocomplete="off" maxlength="250" />
-                <button id="send" type="submit" aria-label="Send message">
-                    Send
-                </button>
+                <button type="submit" class="submit-btn" id="login-btn">Sign in</button>
             </form>
 
-            <div id="messages-container">
-                <span>Messages</span>
-                <ul id="messages"></ul>
+            <div class="divider">or</div>
+
+            <p class="switch-text">No account yet? <a href="#" id="show-register-link">Create one</a></p>
+        </div>
+
+        <div id="register" class="auth-form-container">
+            <div class="auth-logo" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3" />
+                    <path
+                        d="M15.75 3.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.3 12.3 0 0 1 9.374 21a12.3 12.3 0 0 1-6.374-1.765Z" />
+                </svg>
+            </div>
+
+            <div class="auth-head">
+                <h2>Create an account</h2>
+                <p class="subtitle">Pick a name. It has to be unique.</p>
+            </div>
+
+            <div id="register-error" class="error-message" role="alert" aria-live="assertive">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <span id="register-error-text"></span>
+            </div>
+
+            <div id="register-success" class="success-message" role="status" aria-live="polite">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    aria-hidden="true">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+                <span>Account created. Taking you to sign in…</span>
+            </div>
+
+            <form id="register-form" method="post" novalidate>
+                <div class="input-group">
+                    <label for="register-username">Username</label>
+                    <input type="text" name="username" id="register-username" placeholder="Choose a username"
+                        autocomplete="username" autocapitalize="none" spellcheck="false" required minlength="3"
+                        maxlength="50" pattern="[a-zA-Z0-9_]+" />
+                    <span class="input-hint">3–50 characters. Letters, numbers and underscore.</span>
+                </div>
+
+                <div class="input-group">
+                    <label for="register-password">Password</label>
+                    <div class="password-input-wrapper">
+                        <input type="password" name="password" id="register-password" placeholder="Create a password"
+                            autocomplete="new-password" required minlength="6" maxlength="128" />
+                        <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                                aria-hidden="true">
+                                <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
+                                <circle cx="12" cy="12" r="2.6" />
+                            </svg>
+                        </button>
+                    </div>
+                    <span class="input-hint">Minimum 6 characters.</span>
+                </div>
+
+                <button type="submit" class="submit-btn" id="register-btn">Create account</button>
+            </form>
+
+            <div class="divider">or</div>
+
+            <p class="switch-text">Already registered? <a href="#" id="show-login-link">Sign in</a></p>
+        </div>
+    </div>
+
+    <!-- ================= Chat ================= -->
+
+    <div id="layout">
+        <div class="shell app-shell">
+            <div class="shell__core app">
+
+                <header class="header">
+                    <div class="brand">
+                        <button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-label="Toggle member list"
+                            aria-expanded="false" aria-controls="username">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+                                stroke-linecap="round" aria-hidden="true">
+                                <line x1="3" y1="6" x2="21" y2="6" />
+                                <line x1="3" y1="12" x2="15" y2="12" />
+                                <line x1="3" y1="18" x2="19" y2="18" />
+                            </svg>
+                        </button>
+
+                        <div class="brand__mark" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path
+                                    d="M8.6 12a.4.4 0 1 1-.8 0 .4.4 0 0 1 .8 0Zm4.1 0a.4.4 0 1 1-.8 0 .4.4 0 0 1 .8 0Zm4.1 0a.4.4 0 1 1-.8 0 .4.4 0 0 1 .8 0Z" />
+                                <path
+                                    d="M21 12c0 4.6-4 8.3-9 8.3a9.8 9.8 0 0 1-2.6-.3 6 6 0 0 1-3 1.9 4.5 4.5 0 0 0 1-2 5.7 5.7 0 0 1-.5-1.3A8.3 8.3 0 0 1 3 12c0-4.6 4-8.3 9-8.3s9 3.7 9 8.3Z" />
+                            </svg>
+                        </div>
+
+                        <div class="brand__text">
+                            <h1>Realtime Chat</h1>
+                            <span class="brand__sub">Express · ws · Postgres</span>
+                        </div>
+                    </div>
+
+                    <div class="header__actions">
+                        <div class="status" role="status" aria-live="polite">
+                            <span class="dot" id="status-dot"></span>
+                            <span id="status-text">Connecting…</span>
+                        </div>
+
+                        <button id="logout" type="button">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+                                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                                <polyline points="16 17 21 12 16 7" />
+                                <line x1="21" y1="12" x2="9" y2="12" />
+                            </svg>
+                            <span>Sign out</span>
+                        </button>
+                    </div>
+                </header>
+
+                <div id="inner-layout" data-drawer="closed">
+                    <div class="scrim" id="scrim" hidden></div>
+
+                    <aside id="username">
+                        <span class="side-label">Signed in as</span>
+
+                        <div class="identity">
+                            <span class="avatar avatar--lg" id="currentUserAvatar" aria-hidden="true">?</span>
+                            <div class="identity__text">
+                                <p id="currentUser">—</p>
+                                <span class="identity__role">Online</span>
+                            </div>
+                        </div>
+
+                        <div class="presence">
+                            <div class="presence__head">
+                                <span class="side-label">In the room</span>
+                                <span class="presence__count" id="userCount">0</span>
+                            </div>
+                            <ul id="userList"></ul>
+                        </div>
+                    </aside>
+
+                    <main class="chat">
+                        <div id="messages-container">
+                            <ul id="messages" role="log" aria-live="polite" aria-relevant="additions"></ul>
+                        </div>
+
+                        <div class="composer-wrap">
+                            <div class="composer-head">
+                                <label for="message-box">Message</label>
+                                <span class="counter" id="counter" aria-live="off">0/250</span>
+                            </div>
+                            <form id="chat-form">
+                                <textarea id="message-box" rows="1" maxlength="250"
+                                    placeholder="Write a message…"
+                                    autocomplete="off" spellcheck="true" required></textarea>
+                                <button id="send" type="submit" aria-label="Send message">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <line x1="22" y1="2" x2="11" y2="13" />
+                                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                                    </svg>
+                                </button>
+                            </form>
+                        </div>
+                    </main>
+                </div>
+
             </div>
         </div>
     </div>
 
     <script>
-        const loginView = document.querySelector("#login");
-        const registerView = document.querySelector("#register");
-        const chatView = document.querySelector("#layout");
+        /* =====================================================================
+           View state
+           ===================================================================== */
 
-        const loginForm = document.querySelector('#login-form');
-        const registerForm = document.querySelector('#register-form');
-        const chatForm = document.querySelector('#chat-form');
-        
-        const loginError = document.getElementById('login-error');
-        const loginErrorText = document.getElementById('login-error-text');
-        const registerError = document.getElementById('register-error');
-        const registerErrorText = document.getElementById('register-error-text');
-        const registerSuccess = document.getElementById('register-success');
+        const loginView = document.getElementById('login');
+        const registerView = document.getElementById('register');
+        const chatView = document.getElementById('layout');
+        const innerLayout = document.getElementById('inner-layout');
+        const scrim = document.getElementById('scrim');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
 
-        // Password toggle functionality
-        document.querySelectorAll('.password-toggle').forEach(button => {
-            button.addEventListener('click', () => {
-                const input = button.parentElement.querySelector('input');
-                const isPassword = input.type === 'password';
-                input.type = isPassword ? 'text' : 'password';
-                
-                // Update icon
-                button.innerHTML = isPassword
-                    ? `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                        <line x1="1" y1="1" x2="23" y2="23"></line>
-                       </svg>`
-                    : `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                       </svg>`;
-            });
-        });
-
-        function showError(element, textElement, message) {
-            textElement.textContent = message;
-            element.classList.add('visible');
-            element.closest('.auth-form-container').classList.add('shake');
-            setTimeout(() => {
-                element.closest('.auth-form-container').classList.remove('shake');
-            }, 400);
-        }
-
-        function hideError(element) {
-            element.classList.remove('visible');
-        }
-
-        function setButtonLoading(button, loading) {
-            if (loading) {
-                button.disabled = true;
-                button.dataset.originalText = button.textContent;
-                button.textContent = 'Please wait...';
-            } else {
-                button.disabled = false;
-                button.textContent = button.dataset.originalText || button.textContent;
+        /** Shows exactly one of the three views. Class-based, so CSS owns the
+         *  display value instead of scattered inline styles. */
+        function showView(name) {
+            for (const [key, el] of Object.entries({ login: loginView, register: registerView, chat: chatView })) {
+                const active = key === name;
+                el.classList.toggle('active', active);
+                el.hidden = !active;
             }
+            document.body.dataset.view = name;
+            if (name === 'chat') messageBox.focus();
         }
 
-        loginForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            hideError(loginError);
-            const usernameInput = loginForm.querySelector('input[name="username"]');
-            const passwordInput = loginForm.querySelector('input[name="password"]');
-            const submitBtn = document.getElementById('login-btn');
-            setButtonLoading(submitBtn, true);
-            Login(usernameInput.value, passwordInput.value).finally(() => {
-                setButtonLoading(submitBtn, false);
-            });
-        });
+        /* =====================================================================
+           Config
+           ===================================================================== */
 
-        registerForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            hideError(registerError);
-            registerSuccess.classList.remove('visible');
-            const usernameInput = registerForm.querySelector('input[name="username"]');
-            const passwordInput = registerForm.querySelector('input[name="password"]');
-            const submitBtn = document.getElementById('register-btn');
-            setButtonLoading(submitBtn, true);
-            Register(usernameInput.value, passwordInput.value).finally(() => {
-                setButtonLoading(submitBtn, false);
-            });
-        });
-
-        const showLoginLink = document.getElementById('show-login-link');
-        const showRegisterLink = document.getElementById('show-register-link');
-
-        showLoginLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            hideError(registerError);
-            registerSuccess.classList.remove('visible');
-            registerView.classList.remove('active');
-            registerView.style.display = 'none';
-            loginView.classList.add('active');
-            loginView.style.display = 'block';
-        });
-
-        showRegisterLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            hideError(loginError);
-            loginView.classList.remove('active');
-            loginView.style.display = 'none';
-            registerView.classList.add('active');
-            registerView.style.display = 'block';
-        });
-
-        let socket;
         // `127.0.0.1` is a local address too — matching only 'localhost' sent
         // local traffic over https/wss to a plain-http server.
         const LOCAL_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
@@ -305,18 +286,13 @@
         /**
          * Where the API and WebSocket server live.
          *
-         * Resolution order:
-         *   1. `?server=` query parameter — lets you point a deployed client at
-         *      a different API without a rebuild.
-         *   2. `window.SERVER_HOST` — set this in the static host's config.
-         *   3. Same origin as the page.
+         * Resolution order: `?server=` query parameter, then `window.SERVER_HOST`,
+         * then localhost in development, then same origin. A hardcoded hostname
+         * meant every rename or redeploy broke the client; the old value only
+         * worked because a previous deploy's URL had been edited into the source.
          *
-         * A hardcoded hostname meant every rename or redeploy broke the client.
-         * The old value only worked because a previous deploy's URL had been
-         * edited into the source. Same-origin is the default because it is
-         * right by construction; override it only when the API is a different
-         * host — and add that origin to the server's ALLOWED_ORIGINS, or the
-         * handshake is refused with 403.
+         * If you point this at a different host, add that origin to the server's
+         * ALLOWED_ORIGINS or the handshake is refused with 403.
          */
         function resolveServerHost() {
             const fromQuery = new URLSearchParams(window.location.search).get('server');
@@ -326,31 +302,472 @@
                 return window.SERVER_HOST;
             }
 
-            // Local dev serves the client on :5500 and the API on :8080, so
-            // same-origin is wrong there. In production the client and API are
-            // separate Render services, and same-origin is only correct if they
-            // are fronted together — so require the explicit override unless
-            // the page is served from the API host itself.
             if (!isProduction) return 'localhost:8080';
 
             return window.location.host;
         }
 
         const serverHost = resolveServerHost();
-        let username = "";
-        let token = "";
-        let shouldReconnect = true;
-        const currentUser = document.getElementById("currentUser");
-        const statusDot = document.getElementById("status-dot");
-        const statusText = document.getElementById("status-text");
-        const userList = document.getElementById("userList");
-        const connectionStatus = document.getElementById("connection-status");
-        const messageBox = document.getElementById("message-box");
-        const sendButton = document.getElementById("send");
-        const logout = document.getElementById("logout");
 
+        const MAX_MESSAGE = 250;
+
+        let socket;
+        let username = '';
+        let token = '';
+        let shouldReconnect = true;
         let reconnectionInterval = 5000;
-        let maxReconnectionInterval = 30000;
+        const maxReconnectionInterval = 30000;
+
+        /* =====================================================================
+           Elements
+           ===================================================================== */
+
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const chatForm = document.getElementById('chat-form');
+        const messageBox = document.getElementById('message-box');
+        const sendButton = document.getElementById('send');
+        const messageList = document.getElementById('messages');
+        const userList = document.getElementById('userList');
+        const userCount = document.getElementById('userCount');
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+        const currentUser = document.getElementById('currentUser');
+        const currentUserAvatar = document.getElementById('currentUserAvatar');
+        const counter = document.getElementById('counter');
+        const logoutButton = document.getElementById('logout');
+
+        /* =====================================================================
+           Small helpers
+           ===================================================================== */
+
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        /** Stable hue per name, so a person keeps the same colour every time. */
+        function hueFor(name) {
+            let hash = 0;
+            for (const ch of String(name)) hash = (hash * 31 + ch.charCodeAt(0)) % 360;
+            return hash;
+        }
+
+        function initialsFor(name) {
+            const clean = String(name || '?').replace(/[^\w]/g, '');
+            if (!clean) return '?';
+            return clean.slice(0, 2).toUpperCase();
+        }
+
+        function scrollToLatest(behavior = 'auto') {
+            messageList.scrollTo({
+                top: messageList.scrollHeight,
+                behavior: reduceMotion ? 'auto' : behavior,
+            });
+        }
+
+        /* =====================================================================
+           Empty state
+           ===================================================================== */
+
+        let emptyState = null;
+
+        function showEmptyState() {
+            if (emptyState) return;
+            emptyState = document.createElement('li');
+            emptyState.className = 'empty';
+            emptyState.innerHTML = `
+                <span class="empty__mark" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12c0 4.6-4 8.3-9 8.3a9.8 9.8 0 0 1-2.6-.3 6 6 0 0 1-3 1.9 4.5 4.5 0 0 0 1-2 5.7 5.7 0 0 1-.5-1.3A8.3 8.3 0 0 1 3 12c0-4.6 4-8.3 9-8.3s9 3.7 9 8.3Z"/>
+                    </svg>
+                </span>
+                <span class="empty__title">No messages yet</span>
+                <span class="empty__hint">Say something — everyone in the room sees it instantly.</span>`;
+            messageList.appendChild(emptyState);
+        }
+
+        function hideEmptyState() {
+            emptyState?.remove();
+            emptyState = null;
+        }
+
+        /* =====================================================================
+           Message rendering
+           ===================================================================== */
+
+        let lastSender = null;
+
+        function appendMessage({ sender, text, timestamp, mine }) {
+            hideEmptyState();
+
+            // Consecutive messages from one person collapse into a run.
+            const grouped = sender === lastSender;
+            lastSender = sender;
+
+            const row = document.createElement('li');
+            row.className = 'msg';
+            if (mine) row.classList.add('my-message');
+            if (grouped) row.classList.add('is-grouped');
+
+            const avatar = document.createElement('span');
+            avatar.className = 'avatar';
+            avatar.style.setProperty('--hue', String(hueFor(sender)));
+            avatar.textContent = initialsFor(sender);
+            avatar.setAttribute('aria-hidden', 'true');
+
+            const body = document.createElement('div');
+            body.className = 'msg__body';
+
+            const meta = document.createElement('span');
+            meta.className = 'msg__meta';
+            meta.textContent = timestamp ? `${sender} · ${timestamp}` : sender;
+            body.appendChild(meta);
+
+            // textContent, never innerHTML: the server deliberately does not
+            // HTML-encode, so escaping happens here at the sink.
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            bubble.textContent = text;
+            body.appendChild(bubble);
+
+            row.append(avatar, body);
+            messageList.appendChild(row);
+            scrollToLatest('smooth');
+        }
+
+        function appendAnnouncement(text) {
+            hideEmptyState();
+            lastSender = null;
+
+            const li = document.createElement('li');
+            li.className = 'announcement';
+            li.textContent = text;
+            messageList.appendChild(li);
+            scrollToLatest('smooth');
+        }
+
+        /* =====================================================================
+           Presence
+           ===================================================================== */
+
+        function updateUserList(users) {
+            const unique = [...new Set(users)].filter((user) => user !== 'Guest');
+
+            userCount.textContent = String(unique.length);
+            userList.replaceChildren();
+
+            for (const user of unique) {
+                const li = document.createElement('li');
+                if (user === username) li.classList.add('me');
+
+                const dot = document.createElement('span');
+                dot.className = 'user-dot';
+                dot.setAttribute('aria-hidden', 'true');
+
+                const name = document.createElement('span');
+                name.className = 'u-name';
+                name.textContent = user === username ? `${user} (you)` : user;
+
+                li.append(dot, name);
+                userList.appendChild(li);
+            }
+        }
+
+        /* =====================================================================
+           Status
+           ===================================================================== */
+
+        function setStatus(connected, label) {
+            statusDot.classList.toggle('connected', connected);
+            statusDot.classList.toggle('disconnected', !connected);
+            statusText.textContent = label ?? (connected ? 'Connected' : 'Reconnecting');
+            messageBox.disabled = !connected;
+            sendButton.disabled = !connected;
+            chatForm.classList.toggle('is-offline', !connected);
+        }
+
+        /* =====================================================================
+           Composer
+           ===================================================================== */
+
+        function updateCounter() {
+            const length = messageBox.value.length;
+            counter.textContent = `${length}/${MAX_MESSAGE}`;
+            counter.classList.toggle('is-near', length >= MAX_MESSAGE * 0.8 && length <= MAX_MESSAGE);
+            counter.classList.toggle('is-over', length > MAX_MESSAGE);
+        }
+
+        /**
+         * Grows the textarea with its content, up to the CSS max-height, then
+         * scrolls. `field-sizing: content` handles this natively where it is
+         * supported, but it is not everywhere yet.
+         */
+        function autoGrow() {
+            messageBox.style.height = 'auto';
+            messageBox.style.height = `${messageBox.scrollHeight}px`;
+        }
+
+        /**
+         * The Enter/Shift+Enter hint is useful on a desktop keyboard and noise
+         * on a phone, where it overflows the field. Swap it by viewport.
+         */
+        const wideComposer = window.matchMedia('(min-width: 640px)');
+
+        function syncComposerPlaceholder() {
+            messageBox.placeholder = wideComposer.matches
+                ? 'Write a message — Enter to send, Shift+Enter for a new line'
+                : 'Write a message…';
+        }
+
+        wideComposer.addEventListener('change', syncComposerPlaceholder);
+        syncComposerPlaceholder();
+
+        messageBox.addEventListener('input', () => {
+            updateCounter();
+            autoGrow();
+        });
+
+        messageBox.addEventListener('keydown', (event) => {
+            // Enter sends; Shift+Enter inserts a newline. The placeholder
+            // promised this, and it was never wired up.
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                chatForm.requestSubmit();
+            }
+        });
+
+        chatForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+
+            const text = messageBox.value.trim();
+            if (!text) return;
+
+            if (!socket || socket.readyState !== WebSocket.OPEN) {
+                statusText.textContent = 'Not connected';
+                return;
+            }
+
+            socket.send(JSON.stringify({ type: 'chat', username, message: text }));
+
+            messageBox.value = '';
+            updateCounter();
+            autoGrow();
+            messageBox.focus();
+        });
+
+        /* =====================================================================
+           Drawer (small screens)
+           ===================================================================== */
+
+        function setDrawer(open) {
+            innerLayout.dataset.drawer = open ? 'open' : 'closed';
+            sidebarToggle.setAttribute('aria-expanded', String(open));
+            scrim.hidden = !open;
+        }
+
+        sidebarToggle.addEventListener('click', () => {
+            setDrawer(innerLayout.dataset.drawer !== 'open');
+        });
+
+        scrim.addEventListener('click', () => setDrawer(false));
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && innerLayout.dataset.drawer === 'open') setDrawer(false);
+        });
+
+        /* =====================================================================
+           Auth forms
+           ===================================================================== */
+
+        function showError(element, textElement, message) {
+            textElement.textContent = message;
+            element.classList.add('visible');
+
+            const container = element.closest('.auth-form-container');
+            if (container && !reduceMotion) {
+                container.classList.add('shake');
+                setTimeout(() => container.classList.remove('shake'), 420);
+            }
+        }
+
+        function hideError(element) {
+            element.classList.remove('visible');
+        }
+
+        function setButtonLoading(button, loading) {
+            if (loading) {
+                button.disabled = true;
+                button.dataset.label = button.textContent;
+                button.textContent = 'Please wait…';
+            } else {
+                button.disabled = false;
+                button.textContent = button.dataset.label || button.textContent;
+            }
+        }
+
+        document.querySelectorAll('.password-toggle').forEach((button) => {
+            button.addEventListener('click', () => {
+                const input = button.parentElement.querySelector('input');
+                const willShow = input.type === 'password';
+
+                input.type = willShow ? 'text' : 'password';
+                button.setAttribute('aria-label', willShow ? 'Hide password' : 'Show password');
+                button.setAttribute('aria-pressed', String(willShow));
+
+                button.innerHTML = willShow
+                    ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 6.2A9.9 9.9 0 0 1 12 6c6.4 0 10 6 10 6a17 17 0 0 1-3.2 3.9M6.6 7.6A17 17 0 0 0 2 12s3.6 6 10 6a9.6 9.6 0 0 0 4.2-1"/><path d="M9.9 9.9a2.6 2.6 0 0 0 3.6 3.6"/></svg>`
+                    : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="2.6"/></svg>`;
+            });
+        });
+
+        loginForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            hideError(document.getElementById('login-error'));
+
+            const button = document.getElementById('login-btn');
+            setButtonLoading(button, true);
+
+            Login(
+                loginForm.querySelector('input[name="username"]').value,
+                loginForm.querySelector('input[name="password"]').value,
+            ).finally(() => setButtonLoading(button, false));
+        });
+
+        registerForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            hideError(document.getElementById('register-error'));
+            document.getElementById('register-success').classList.remove('visible');
+
+            const button = document.getElementById('register-btn');
+            setButtonLoading(button, true);
+
+            Register(
+                registerForm.querySelector('input[name="username"]').value,
+                registerForm.querySelector('input[name="password"]').value,
+            ).finally(() => setButtonLoading(button, false));
+        });
+
+        document.getElementById('show-login-link').addEventListener('click', (event) => {
+            event.preventDefault();
+            hideError(document.getElementById('register-error'));
+            document.getElementById('register-success').classList.remove('visible');
+            showView('login');
+        });
+
+        document.getElementById('show-register-link').addEventListener('click', (event) => {
+            event.preventDefault();
+            hideError(document.getElementById('login-error'));
+            showView('register');
+        });
+
+        /* =====================================================================
+           Auth API
+           ===================================================================== */
+
+        async function Register(usernameValue, password) {
+            try {
+                const response = await fetch(`${apiProtocol}://${serverHost}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: usernameValue, password }),
+                });
+
+                const data = await response.json().catch(() => ({}));
+
+                if (response.ok) {
+                    const success = document.getElementById('register-success');
+                    success.classList.add('visible');
+                    registerForm.reset();
+
+                    setTimeout(() => {
+                        success.classList.remove('visible');
+                        showView('login');
+                        document.getElementById('username-input').value = usernameValue;
+                    }, 1800);
+                } else {
+                    showError(
+                        document.getElementById('register-error'),
+                        document.getElementById('register-error-text'),
+                        data.message || 'Registration failed',
+                    );
+                }
+            } catch {
+                showError(
+                    document.getElementById('register-error'),
+                    document.getElementById('register-error-text'),
+                    'Cannot reach the server. Check your connection.',
+                );
+            }
+        }
+
+        async function Login(usernameValue, password) {
+            try {
+                const response = await fetch(`${apiProtocol}://${serverHost}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: usernameValue, password }),
+                });
+
+                if (!response.ok) {
+                    const data = await response.json().catch(() => ({}));
+                    throw new Error(data.message || 'Invalid username or password');
+                }
+
+                const data = await response.json();
+
+                token = data.token;
+                username = usernameValue;
+                shouldReconnect = true;
+                reconnectionInterval = 5000;
+
+                lastSender = null;
+                messageList.replaceChildren();
+                showEmptyState();
+
+                currentUser.textContent = username;
+                currentUserAvatar.textContent = initialsFor(username);
+                currentUserAvatar.style.setProperty('--hue', String(hueFor(username)));
+
+                setStatus(false, 'Connecting…');
+                showView('chat');
+
+                connect(token, username);
+            } catch (error) {
+                showError(
+                    document.getElementById('login-error'),
+                    document.getElementById('login-error-text'),
+                    error.message,
+                );
+            }
+        }
+
+        async function Logout() {
+            try {
+                if (token) {
+                    await fetch(`${apiProtocol}://${serverHost}/logout`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token }),
+                    });
+                }
+            } catch {
+                // A failed logout still ends the local session.
+            } finally {
+                shouldReconnect = false;
+                socket?.close();
+                token = '';
+                username = '';
+                messageList.replaceChildren();
+                userList.replaceChildren();
+                userCount.textContent = '0';
+                showView('login');
+            }
+        }
+
+        logoutButton.addEventListener('click', Logout);
+
+        /* =====================================================================
+           WebSocket
+           ===================================================================== */
 
         /**
          * Trades the JWT for a short-lived, single-use ticket, then connects
@@ -363,10 +780,10 @@
          */
         async function fetchTicket(jwt) {
             const response = await fetch(`${apiProtocol}://${serverHost}/ws-ticket`, {
-                method: "POST",
+                method: 'POST',
                 headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${jwt}`,
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${jwt}`,
                 },
             });
 
@@ -378,17 +795,15 @@
             return (await response.json()).ticket;
         }
 
-        async function connect(token, username) {
+        async function connect(jwt, name) {
             let ticket;
             try {
-                ticket = await fetchTicket(token);
+                ticket = await fetchTicket(jwt);
             } catch (error) {
                 // A rejected ticket means the session is gone (expired or
-                // logged out). Retrying would just loop, so stop and surface it.
-                console.error('Ticket exchange failed:', error);
+                // signed out). Retrying would just loop, so stop and surface it.
+                setStatus(false, 'Session expired');
                 shouldReconnect = false;
-                setStatus(false);
-                statusText.textContent = 'Session expired';
                 return;
             }
 
@@ -396,211 +811,63 @@
             socket = new WebSocket(wsUrl);
 
             socket.onopen = () => {
-                console.log("Connected to the websocket server");
                 reconnectionInterval = 5000;
                 setStatus(true);
-                currentUser.textContent = username;
+                messageBox.focus();
             };
 
             socket.onmessage = (event) => {
-                const messageList = document.getElementById("messages");
-                const msg = JSON.parse(event.data);
+                let msg;
+                try {
+                    msg = JSON.parse(event.data);
+                } catch {
+                    return;
+                }
 
-                if (msg.type === "userList") {
+                if (msg.type === 'userList') {
                     updateUserList(msg.users);
                     return;
                 }
 
-                if (msg.type === "announcement") {
-                    const li = document.createElement("li");
-                    li.classList.add("announcement");
-                    li.textContent = msg.message;
-                    messageList.appendChild(li);
+                if (msg.type === 'announcement') {
+                    appendAnnouncement(msg.message);
                     return;
                 }
 
                 if (msg.message) {
-                    const li = document.createElement("li");
-                    if (msg.username === username) {
-                        li.classList.add("my-message");
-                    }
-                    if (msg.username || msg.timestamp) {
-                        const meta = document.createElement("span");
-                        meta.className = "meta";
-                        const who = msg.username ?? "Unknown";
-                        const when = msg.timestamp ? ` • ${msg.timestamp}` : "";
-                        meta.textContent = `${who}${when}`;
-                        li.appendChild(meta);
-                    }
-                    li.appendChild(document.createTextNode(msg.message));
-                    messageList.appendChild(li);
-                    messageList.scrollTop = messageList.scrollHeight;
+                    appendMessage({
+                        sender: msg.username ?? 'Unknown',
+                        text: msg.message,
+                        timestamp: msg.timestamp,
+                        mine: msg.username === name,
+                    });
                 }
             };
 
-            socket.onerror = (error) => {
-                console.log("Error", error);
+            socket.onerror = () => {
                 setStatus(false);
-                statusText.textContent = "Connection error";
             };
 
             socket.onclose = () => {
-                console.log(`Websocket disconnected. Reconnecting in ${reconnectionInterval / 1000}s...`);
                 setStatus(false);
-                statusText.textContent = 'Reconnecting...';
 
-                if (shouldReconnect) {
-                    setTimeout(() => {
-                        connect(token, username);
-                    }, reconnectionInterval);
+                if (!shouldReconnect) return;
 
-                    reconnectionInterval = Math.min(reconnectionInterval * 2, maxReconnectionInterval);
-                }
+                setTimeout(() => {
+                    if (shouldReconnect) connect(jwt, name);
+                }, reconnectionInterval);
+
+                reconnectionInterval = Math.min(reconnectionInterval * 2, maxReconnectionInterval);
             };
         }
 
-        async function Logout(token) {
-            try {
-                const response = await fetch(`${apiProtocol}://${serverHost}/logout`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ token }),
-                });
+        /* =====================================================================
+           Boot
+           ===================================================================== */
 
-                if (!response.ok) {
-                    throw new Error("Logout Failed");
-                }
-
-                shouldReconnect = false;
-                if (socket) {
-                    socket.close();
-                }
-
-                token = "";
-                username = "";
-
-                chatView.style.display = 'none';
-                loginView.style.display = 'block';
-                loginView.classList.add('active');
-
-            } catch (error) {
-                console.error('Logout error:', error.message);
-            }
-        }
-
-        async function Register(usernameValue, password) {
-            try {
-                const response = await fetch(`${apiProtocol}://${serverHost}/register`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ username: usernameValue, password }),
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    registerSuccess.classList.add('visible');
-                    registerForm.reset();
-                    
-                    setTimeout(() => {
-                        registerSuccess.classList.remove('visible');
-                        registerView.style.display = 'none';
-                        registerView.classList.remove('active');
-                        loginView.style.display = 'block';
-                        loginView.classList.add('active');
-                        document.getElementById('username-input').value = usernameValue;
-                    }, 2000);
-                } else {
-                    showError(registerError, registerErrorText, data.message || 'Registration failed');
-                }
-            } catch (error) {
-                console.log('Registration error:', error);
-                showError(registerError, registerErrorText, 'Connection error. Please try again.');
-            }
-        }
-
-        async function Login(usernameValue, password) {
-            try {
-                const response = await fetch(`${apiProtocol}://${serverHost}/login`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ username: usernameValue, password }),
-                });
-
-                if (!response.ok) {
-                    const data = await response.json();
-                    throw new Error(data.message || 'Invalid username or password');
-                }
-
-                const data = await response.json();
-
-                token = data.token;
-                username = usernameValue;
-                shouldReconnect = true;
-
-                loginView.style.display = 'none';
-                loginView.classList.remove('active');
-                registerView.style.display = 'none';
-                document.getElementById('layout').style.display = 'flex';
-
-                connect(token, username);
-            } catch (error) {
-                showError(loginError, loginErrorText, error.message);
-            }
-        }
-
-        const setStatus = (connected) => {
-            statusDot.classList.toggle("connected", connected);
-            statusDot.classList.toggle("disconnected", !connected);
-            statusText.textContent = connected ? "Connected" : "Reconnecting";
-            messageBox.disabled = !connected;
-            sendButton.disabled = !connected;
-            chatForm.style.opacity = connected ? 1 : 0.5;
-        };
-
-        logout.addEventListener("click", () => {
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                Logout(token);
-            }
-        });
-
-        function updateUserList(users) {
-            userList.innerHTML = "";
-            const uniqueUsers = [...new Set(users)];
-
-            uniqueUsers.forEach((user) => {
-                if (user !== "Guest") {
-                    const li = document.createElement("li");
-                    const dot = document.createElement("span");
-                    dot.className = "user-dot";
-                    li.appendChild(dot);
-
-                    const name = document.createElement("span");
-                    name.textContent = user;
-                    li.appendChild(name);
-
-                    if (user === username) {
-                        li.classList.add("me");
-                    }
-                    userList.appendChild(li);
-                }
-            });
-        }
-
-        chatForm.addEventListener("submit", (e) => {
-            e.preventDefault();
-            if (socket && socket.readyState === WebSocket.OPEN && messageBox.value.trim()) {
-                const messageObject = {
-                    type: "chat",
-                    username: username,
-                    message: messageBox.value.trim(),
-                };
-                socket.send(JSON.stringify(messageObject));
-                messageBox.value = "";
-            } else {
-                console.log("Socket is not connected");
-            }
-        });
+        showView('login');
+        setStatus(false, 'Connecting…');
+        updateCounter();
     </script>
 </body>
 

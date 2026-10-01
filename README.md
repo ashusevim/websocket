@@ -38,10 +38,26 @@ ticket before connecting. See [WebSocket authentication](#websocket-authenticati
 - **Tests**: 63 unit and integration tests, no mocking of the database or the
   HTTP/WS stack
 - **Monitoring**: Winston (JSON in production), Sentry error tracking
-- **Modern UI**: responsive dark/light theme, connection status, user list
 - **Graceful Shutdown**: closes sockets, flushes Sentry, then drains the pool
 - **Production Ready**: multi-stage Docker image (non-root), health check,
   idempotent schema, Render deploy config
+
+### Client
+
+- **Design system generated, then measured.** Colours, type scale and motion
+  tokens come from the [ui-ux-pro-max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)
+  engine (pattern *Real-Time / Operations*, style *Soft UI Evolution*), then
+  every colour pair is checked against WCAG by a script in CI.
+- **Dark and light, both first-class.** Two complete token sets, not one plus
+  inverted greys.
+- **Chat-native layout.** The page never scrolls; only the message list does.
+  The composer is pinned to the bottom and grows with its content.
+- **Live presence.** Connection state, room member count, per-user status
+  dots, and join/leave announcements.
+- **Accessible by construction**: semantic landmarks, a visible label on every
+  input (never a placeholder standing in for one), `aria-live` on the log and
+  status, keyboard-operable drawer, and `prefers-reduced-motion` honoured.
+- **Responsive down to 375px**, with the member list becoming a drawer.
 
 ## Quick Start
 
