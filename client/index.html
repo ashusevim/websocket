@@ -17,6 +17,8 @@
       anything but this file.
     -->
     <script src="config.js"></script>
+    <!-- Body parsing. Must precede the main script: it attaches ChatAPI. -->
+    <script src="api.js"></script>
 
     <!--
       Resolve the theme before first paint.
@@ -812,7 +814,7 @@
                     body: JSON.stringify({ username: usernameValue, password }),
                 });
 
-                const data = await response.json().catch(() => ({}));
+                const data = (await ChatAPI.readJSON(response)) ?? {};
 
                 if (response.ok) {
                     const success = document.getElementById('register-success');
@@ -849,11 +851,21 @@
                 });
 
                 if (!response.ok) {
-                    const data = await response.json().catch(() => ({}));
+                    const data = (await ChatAPI.readJSON(response)) ?? {};
                     throw new Error(data.message || 'Invalid username or password');
                 }
 
-                const data = await response.json();
+                // A 2xx with no usable body is possible: a proxy answering on
+                // the API's behalf, a suspended service, a rewritten path.
+                // Reporting it as a session failure beats leaking the parser
+                // error that used to be shown here verbatim.
+                const data = await ChatAPI.readJSON(response);
+                if (!data || typeof data.token !== 'string' || !data.token) {
+                    throw new Error(
+                        'Login reached the server but came back without a session token. '
+                        + 'The server may still be starting — wait a moment and try again.',
+                    );
+                }
 
                 token = data.token;
                 username = usernameValue;
@@ -929,11 +941,15 @@
             });
 
             if (!response.ok) {
-                const data = await response.json().catch(() => ({}));
+                const data = (await ChatAPI.readJSON(response)) ?? {};
                 throw new Error(data.message || 'Could not authorise connection');
             }
 
-            return (await response.json()).ticket;
+            const data = await ChatAPI.readJSON(response);
+            if (!data || typeof data.ticket !== 'string' || !data.ticket) {
+                throw new Error('Connection authorised, but the server sent no ticket.');
+            }
+            return data.ticket;
         }
 
         async function connect(jwt, name) {

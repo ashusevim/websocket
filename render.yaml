@@ -38,8 +38,9 @@ services:
         fromDatabase:
           name: websocket-chat-db
           property: connectionString
-      # Must list the client's exact origin. A ws:// or wss:// entry is wrong
-      # here: the Origin header is always http/https, even on a wss connection.
+      # REQUIRED: the server exits at boot if this is unset or invalid. It must
+      # list the client's exact origin. A ws:// or wss:// entry is wrong here:
+      # the Origin header is always http/https, even on a wss connection.
       # Replace with your real client URL after the first deploy.
       - key: ALLOWED_ORIGINS
         sync: false
@@ -101,11 +102,19 @@ databases:
 #
 # ALLOWED_ORIGINS
 # ---------------
-# Must be the client's exact origin, e.g. https://chat.ashusevim.dev
-#   - no trailing slash
-#   - no ws:// or wss:// (the Origin header is http/https even on wss)
-# A wrong value here fails as a 403 on the WebSocket connect, which looks
-# nothing like a CORS error.
+# REQUIRED. The server refuses to start without it (src/index.ts), and there is
+# no built-in default list: an allowlist of stale hostnames fails as an
+# unexplained 403 on connect, which is far harder to diagnose than a boot
+# error that names the variable.
 #
-# On first deploy you do not know the client URL yet. Put any valid value,
-# confirm both services are live, then come back and set the real one.
+# The client's origin only:
+#     https://your-client.example.com
+#   - scheme must be http:// or https:// — ws:// and wss:// can never match the
+#     Origin header, which stays http/https even on a wss connection
+#   - no path, query or fragment
+#   - a trailing slash is fine: resolveOrigins() normalises to parsed.origin
+#
+# Comma-separate to allow more than one.
+#
+# On first deploy you do not know the client URL yet. Put any valid origin,
+# confirm both services are live, then set the real one.

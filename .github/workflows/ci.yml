@@ -68,6 +68,13 @@ jobs:
       - name: Render blueprint check
         run: npm run check:render
 
+      # Client body-parsing. Guards the failure that shipped as a raw
+      # "Unexpected end of JSON input" on login: a 2xx with an empty body must
+      # surface as a message the user can act on, and a stray direct .json()
+      # call in index.html reintroduces it silently.
+      - name: Client tests
+        run: npm run test:client
+
       # The integration suite needs a real Postgres: the 409 path depends on a
       # unique constraint and logout revocation depends on a row delete, so a
       # mock would not exercise either. GitHub runners have Docker, so the same

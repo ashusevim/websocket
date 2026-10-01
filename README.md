@@ -84,6 +84,7 @@ DB_NAME=websocket_chat
 PORT=8080
 JWT_SECRET=$(openssl rand -hex 32)
 NODE_ENV=development
+ALLOWED_ORIGINS=http://localhost:5500
 EOF
 
 # 3. Install & run server
@@ -374,8 +375,8 @@ NODE_ENV=development
 # Auth (required — the server refuses to start without it)
 JWT_SECRET=your-secret-key  # Generate with: openssl rand -hex 32
 
-# CORS + WebSocket origin allowlist (optional, comma-separated)
-ALLOWED_ORIGINS=http://localhost:5500,https://your-client.example.com
+# CORS + WebSocket origin allowlist (required — comma-separated, no path)
+ALLOWED_ORIGINS=http://localhost:5500
 
 # Database TLS (optional — SSL is negotiated on demand, not forced)
 # PGSSLMODE=require
@@ -387,20 +388,31 @@ SENTRY_DSN=your-sentry-dsn
 
 ### Allowed Origins
 
-There is **one** list, used for both CORS and the WebSocket handshake. It lives
-in `server/src/app.ts` and is overridable per environment:
+There is **one** list, used for both CORS and the WebSocket handshake, and it
+is configuration only — `ALLOWED_ORIGINS`, comma-separated:
 
 ```bash
-ALLOWED_ORIGINS=https://your-client.example.com,https://staging.example.com
+ALLOWED_ORIGINS=http://localhost:5500,https://your-client.example.com
 ```
 
-Without the variable, the built-in defaults in `app.ts` apply.
+**There is no built-in default.** An earlier version shipped a previous
+deployment's hostnames as defaults, which meant the first deploy after a
+service was recreated checked origins that no longer existed and failed as an
+unexplained 403. Leaving the variable unset now fails at boot with a message
+naming it, instead of starting up and refusing every connection.
 
-Values are matched against the `Origin` header exactly, so they must be
-scheme-qualified origins (`https://host`, not `host`) and must **not** include
-`ws://` or `wss://` — the `Origin` header on a WebSocket handshake is always
-`http`/`https`, even for a `wss` connection. Getting this wrong is the most
-common cause of a 403 on connect.
+Each entry is validated at startup by `resolveOrigins()`:
+
+- must parse as a URL, and use `http://` or `https://`. `localhost:5500`
+  parses as scheme `localhost:`, so a missing scheme is caught explicitly;
+- must be a bare origin — no path, query or fragment;
+- is normalised to `parsed.origin`, so lowercasing, a trailing slash or a
+  default port cannot cause a mismatch.
+
+Matching is an exact string comparison against the `Origin` header, which is
+why `ws://` and `wss://` are rejected: that header is always `http`/`https`,
+even on a `wss` connection. Getting it wrong was the most common cause of a
+403 on connect, and it now fails at boot instead.
 
 This project previously kept two lists, `allowedOrigins` and
 `wsAllowedOrigins`, and validated the handshake against the first while the
@@ -740,7 +752,7 @@ There is also a query override, useful for testing a deploy before committing to
 a hostname:
 
 ```
-https://chat.ashusevim.dev/?server=websocket-chat-server-ptfw.onrender.com
+https://your-client.example.com/?server=api.example.com
 ```
 
 The query wins over `config.js`.
@@ -852,14 +864,22 @@ npm run test:db:down  # stop the throwaway container
 npm run typecheck
 ```
 
-**63 tests.** Node's built-in runner (`node --test`) — no test framework
-dependency.
+**83 server tests + 11 client tests.** Node's built-in runner (`node --test`) —
+no test framework dependency.
 
 | Suite | Tests | Covers |
 |-------|-------|--------|
 | `utils.test.ts` | 16 | Validation bounds, type guards, sanitizer |
 | `tickets.test.ts` | 9 | Issue, consume, single-use, expiry, sweep |
+| `origins.test.ts` | 20 | Allowlist parsing, normalisation, rejection |
 | `integration.test.ts` | 38 | Real HTTP + WebSocket against real Postgres |
+
+The client suite runs from the repo root and covers response-body handling
+(`client/test/api.test.mjs`):
+
+```bash
+npm run test:client
+```
 
 The integration tests mock nothing. They exercise the actual Express app, the
 actual WebSocket upgrade, and a real database, because the behaviour under test
@@ -913,6 +933,12 @@ Each of these was a real bug, and each has a test that fails without the fix:
   connections"*.
 - **Dead origin allowlist** — `wsAllowedOrigins` sat next to `allowedOrigins`
   unused, while the handshake validated against the other one.
+- **A previous deployment's hostnames as default origins** — `defaultOrigins`
+  hardcoded old Render service URLs, so a deploy against recreated services
+  checked origins that no longer existed and failed as an unexplained 403 on
+  connect. The list is configuration only now: an unset `ALLOWED_ORIGINS` fails
+  at boot naming the variable, and each entry is validated and normalised to
+  what the browser will actually send. `origins.test.ts` covers all of it.
 
 Not every regression belongs in the server suite. **The Blueprint rejected on
 deploy** — `render.yaml` declared `type: db` under `databases`, a key that does
