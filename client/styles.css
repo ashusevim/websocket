@@ -25,7 +25,17 @@
    1. Tokens
    -------------------------------------------------------------------------- */
 
-:root {
+/*
+   Theming is attribute-driven, not media-query-driven.
+
+   The theme is resolved to an explicit `data-theme` on <html> by an inline
+   script in <head>, before first paint. That gives one code path for both the
+   manual toggle and the system preference, and it means there is exactly one
+   light token block instead of the same list repeated inside a media query.
+   Dark is the root default so a scripted-off client still gets a coherent UI.
+*/
+:root,
+:root[data-theme="dark"] {
     color-scheme: dark;
 
     --bg: #0a0a0b;
@@ -74,40 +84,38 @@
     --z-sticky: 2;
 }
 
-@media (prefers-color-scheme: light) {
-    :root {
-        color-scheme: light;
+:root[data-theme="light"] {
+    color-scheme: light;
 
-        --bg: #f7f7f8;
-        --surface: #ffffff;
-        --surface-2: #f0f0f2;
-        --surface-3: #e4e4e8;
+    --bg: #f7f7f8;
+    --surface: #ffffff;
+    --surface-2: #f0f0f2;
+    --surface-3: #e4e4e8;
 
-        --hairline: #e2e2e6;
-        --hairline-strong: #cfcfd6;
+    --hairline: #e2e2e6;
+    --hairline-strong: #cfcfd6;
 
-        --text: #0a0a0b;
-        --text-dim: #54545e;
-        --text-faint: #6b6b76;
+    --text: #0a0a0b;
+    --text-dim: #54545e;
+    --text-faint: #6b6b76;
 
         /* A darker bronze in light mode: the gold is far too light to carry
            text on white. */
-        --accent: #8a6d1f;
-        --accent-dim: #6f5718;
-        --on-accent: #fffdf5;
-        --accent-ink: #8a6d1f;
-        --accent-wash: rgba(138, 109, 31, 0.08);
-        --accent-line: rgba(138, 109, 31, 0.34);
+    --accent: #8a6d1f;
+    --accent-dim: #6f5718;
+    --on-accent: #fffdf5;
+    --accent-ink: #8a6d1f;
+    --accent-wash: rgba(138, 109, 31, 0.08);
+    --accent-line: rgba(138, 109, 31, 0.34);
 
-        --success: #146c43;
-        --success-wash: rgba(20, 108, 67, 0.08);
-        --danger: #b42318;
-        --danger-wash: rgba(180, 35, 24, 0.07);
-        --warn: #8a6d1f;
+    --success: #146c43;
+    --success-wash: rgba(20, 108, 67, 0.08);
+    --danger: #b42318;
+    --danger-wash: rgba(180, 35, 24, 0.07);
+    --warn: #8a6d1f;
 
-        --shadow-pop: 0 16px 40px -16px rgba(10, 10, 11, 0.22);
-        --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.9);
-    }
+    --shadow-pop: 0 16px 40px -16px rgba(10, 10, 11, 0.22);
+    --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 /* --------------------------------------------------------------------------
@@ -148,11 +156,9 @@ body::before {
             rgba(255, 255, 255, 0.028), transparent 58%);
 }
 
-@media (prefers-color-scheme: light) {
-    body::before {
-        background: radial-gradient(120% 80% at 50% 0%,
-                rgba(255, 255, 255, 0.9), transparent 60%);
-    }
+:root[data-theme="light"] body::before {
+    background: radial-gradient(120% 80% at 50% 0%,
+            rgba(255, 255, 255, 0.9), transparent 60%);
 }
 
 button,
@@ -225,6 +231,14 @@ body:not([data-view="chat"]) #layout {
     background: var(--surface);
     box-shadow: var(--shadow-pop);
     animation: rise var(--t-base) var(--ease) both;
+}
+
+/* Logo and theme toggle share a row so the theme is switchable before sign-in. */
+.auth-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
 }
 
 .auth-logo {
@@ -617,6 +631,47 @@ body:not([data-view="chat"]) #layout {
 #logout svg {
     width: 12px;
     height: 12px;
+}
+
+/*
+   Theme toggle.
+
+   Both icons ship in the markup and exactly one is shown, chosen by the theme
+   attribute on <html>. Doing it in CSS means the correct icon is already
+   correct on first paint, with no JS having to run to avoid a flash of the
+   wrong glyph.
+*/
+.icon-btn {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    flex: none;
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-sm);
+    color: var(--text-dim);
+    transition: color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
+}
+
+.icon-btn:hover {
+    color: var(--text);
+    border-color: var(--hairline-strong);
+}
+
+.icon-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* In dark, offer light: show the sun. */
+.icon-btn .icon-moon,
+:root[data-theme="light"] .icon-btn .icon-sun {
+    display: none;
+}
+
+/* In light, offer dark: show the moon. */
+:root[data-theme="light"] .icon-btn .icon-moon {
+    display: block;
 }
 
 .sidebar-toggle {

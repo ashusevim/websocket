@@ -9,6 +9,34 @@
     <meta name="description" content="Real-time chat over WebSockets with JWT authentication." />
     <title>Realtime Chat</title>
     <link rel="stylesheet" href="styles.css" />
+
+    <!--
+      Resolve the theme before first paint.
+
+      This has to be inline and synchronous: an external or deferred script runs
+      after the first paint, which shows a flash of the wrong theme. It sets
+      `data-theme` on <html>, and styles.css keys its tokens off that attribute,
+      so there is exactly one code path for the manual toggle and the system
+      preference.
+    -->
+    <script>
+        (function () {
+            const STORAGE_KEY = 'chat-theme';
+            let stored = null;
+            try {
+                stored = localStorage.getItem(STORAGE_KEY);
+            } catch {
+                // Private mode or blocked storage: fall back to the system.
+            }
+
+            const system = window.matchMedia('(prefers-color-scheme: light)');
+            const theme = stored === 'light' || stored === 'dark'
+                ? stored
+                : (system.matches ? 'light' : 'dark');
+
+            document.documentElement.dataset.theme = theme;
+        })();
+    </script>
     <link rel="icon"
         href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237c5cff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8.6 12a.4.4 0 1 1-.8 0 .4.4 0 0 1 .8 0Z'/%3E%3Cpath d='M12.7 12a.4.4 0 1 1-.8 0 .4.4 0 0 1 .8 0Z'/%3E%3Cpath d='M16.8 12a.4.4 0 1 1-.8 0 .4.4 0 0 1 .8 0Z'/%3E%3Cpath d='M21 12c0 4.6-4 8.3-9 8.3a9.8 9.8 0 0 1-2.6-.3 6 6 0 0 1-3 1.9 4.5 4.5 0 0 0 1-2 5.7 5.7 0 0 1-.5-1.3A8.3 8.3 0 0 1 3 12c0-4.6 4-8.3 9-8.3s9 3.7 9 8.3Z'/%3E%3C/svg%3E" />
 </head>
@@ -18,14 +46,36 @@
 
     <div class="auth-wrap">
         <div id="login" class="auth-form-container active">
-            <div class="auth-logo" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-                    stroke-linejoin="round">
-                    <path
-                        d="M8.6 12a.4.4 0 1 1-.8 0 .4.4 0 0 1 .8 0Zm4.1 0a.4.4 0 1 1-.8 0 .4.4 0 0 1 .8 0Zm4.1 0a.4.4 0 1 1-.8 0 .4.4 0 0 1 .8 0Z" />
-                    <path
-                        d="M21 12c0 4.6-4 8.3-9 8.3a9.8 9.8 0 0 1-2.6-.3 6 6 0 0 1-3 1.9 4.5 4.5 0 0 0 1-2 5.7 5.7 0 0 1-.5-1.3A8.3 8.3 0 0 1 3 12c0-4.6 4-8.3 9-8.3s9 3.7 9 8.3Z" />
-                </svg>
+            <div class="auth-top">
+    <div class="auth-logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path
+                d="M8.6 12a.4.4 0 1 1-.8 0 .4.4 0 0 1 .8 0Zm4.1 0a.4.4 0 1 1-.8 0 .4.4 0 0 1 .8 0Zm4.1 0a.4.4 0 1 1-.8 0 .4.4 0 0 1 .8 0Z" />
+            <path
+                d="M21 12c0 4.6-4 8.3-9 8.3a9.8 9.8 0 0 1-2.6-.3 6 6 0 0 1-3 1.9 4.5 4.5 0 0 0 1-2 5.7 5.7 0 0 1-.5-1.3A8.3 8.3 0 0 1 3 12c0-4.6 4-8.3 9-8.3s9 3.7 9 8.3Z" />
+        </svg>
+    </div>
+                <button class="icon-btn" type="button" data-theme-toggle
+                    aria-label="Switch theme" aria-pressed="false">
+<svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="4.2" />
+                            <line x1="12" y1="2.2" x2="12" y2="4.4" />
+                            <line x1="12" y1="19.6" x2="12" y2="21.8" />
+                            <line x1="2.2" y1="12" x2="4.4" y2="12" />
+                            <line x1="19.6" y1="12" x2="21.8" y2="12" />
+                            <line x1="5.1" y1="5.1" x2="6.6" y2="6.6" />
+                            <line x1="17.4" y1="17.4" x2="18.9" y2="18.9" />
+                            <line x1="5.1" y1="18.9" x2="6.6" y2="17.4" />
+                            <line x1="17.4" y1="6.6" x2="18.9" y2="5.1" />
+                        </svg>
+                        <!-- Moon: shown while in light, i.e. "go dark" -->
+                        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M20.5 14.3A8.5 8.5 0 1 1 9.7 3.5a6.6 6.6 0 0 0 10.8 10.8Z" />
+                        </svg>
+                </button>
             </div>
 
             <div class="auth-head">
@@ -76,13 +126,35 @@
         </div>
 
         <div id="register" class="auth-form-container">
-            <div class="auth-logo" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-                    stroke-linejoin="round">
-                    <path d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3" />
-                    <path
-                        d="M15.75 3.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.3 12.3 0 0 1 9.374 21a12.3 12.3 0 0 1-6.374-1.765Z" />
-                </svg>
+            <div class="auth-top">
+    <div class="auth-logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3" />
+            <path
+                d="M15.75 3.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.3 12.3 0 0 1 9.374 21a12.3 12.3 0 0 1-6.374-1.765Z" />
+        </svg>
+    </div>
+                <button class="icon-btn" type="button" data-theme-toggle
+                    aria-label="Switch theme" aria-pressed="false">
+<svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="4.2" />
+                            <line x1="12" y1="2.2" x2="12" y2="4.4" />
+                            <line x1="12" y1="19.6" x2="12" y2="21.8" />
+                            <line x1="2.2" y1="12" x2="4.4" y2="12" />
+                            <line x1="19.6" y1="12" x2="21.8" y2="12" />
+                            <line x1="5.1" y1="5.1" x2="6.6" y2="6.6" />
+                            <line x1="17.4" y1="17.4" x2="18.9" y2="18.9" />
+                            <line x1="5.1" y1="18.9" x2="6.6" y2="17.4" />
+                            <line x1="17.4" y1="6.6" x2="18.9" y2="5.1" />
+                        </svg>
+                        <!-- Moon: shown while in light, i.e. "go dark" -->
+                        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M20.5 14.3A8.5 8.5 0 1 1 9.7 3.5a6.6 6.6 0 0 0 10.8 10.8Z" />
+                        </svg>
+                </button>
             </div>
 
             <div class="auth-head">
@@ -178,6 +250,27 @@
                     </div>
 
                     <div class="header__actions">
+                        <button class="icon-btn" type="button" data-theme-toggle
+                            aria-label="Switch theme" aria-pressed="false">
+<svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+                                    <circle cx="12" cy="12" r="4.2" />
+                                    <line x1="12" y1="2.2" x2="12" y2="4.4" />
+                                    <line x1="12" y1="19.6" x2="12" y2="21.8" />
+                                    <line x1="2.2" y1="12" x2="4.4" y2="12" />
+                                    <line x1="19.6" y1="12" x2="21.8" y2="12" />
+                                    <line x1="5.1" y1="5.1" x2="6.6" y2="6.6" />
+                                    <line x1="17.4" y1="17.4" x2="18.9" y2="18.9" />
+                                    <line x1="5.1" y1="18.9" x2="6.6" y2="17.4" />
+                                    <line x1="17.4" y1="6.6" x2="18.9" y2="5.1" />
+                                </svg>
+                                <!-- Moon: shown while in light, i.e. "go dark" -->
+                                <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M20.5 14.3A8.5 8.5 0 1 1 9.7 3.5a6.6 6.6 0 0 0 10.8 10.8Z" />
+                                </svg>
+                        </button>
+
                         <div class="status" role="status" aria-live="polite">
                             <span class="dot" id="status-dot"></span>
                             <span id="status-text">Connecting…</span>
@@ -335,6 +428,9 @@
         const currentUser = document.getElementById('currentUser');
         const currentUserAvatar = document.getElementById('currentUserAvatar');
         const counter = document.getElementById('counter');
+        // One toggle per view (login, register, chat). Only the active view is
+        // visible, but all of them are kept in sync from the single handler.
+        const themeToggles = [...document.querySelectorAll('[data-theme-toggle]')];
         const logoutButton = document.getElementById('logout');
 
         /* =====================================================================
@@ -862,12 +958,74 @@
         }
 
         /* =====================================================================
+           Theme
+
+           The inline script in <head> already resolved and applied the theme
+           before first paint. This only handles toggling and persistence, so the
+           UI never re-derives what the stylesheet already knows.
+           ===================================================================== */
+
+        const THEME_STORAGE_KEY = 'chat-theme';
+        const systemScheme = window.matchMedia('(prefers-color-scheme: light)');
+
+        function currentTheme() {
+            return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+        }
+
+        /** Keeps every toggle's accessible name and state describing the next action. */
+        function syncThemeToggle() {
+            const isLight = currentTheme() === 'light';
+            for (const toggle of themeToggles) {
+                toggle.setAttribute('aria-pressed', String(isLight));
+                toggle.setAttribute(
+                    'aria-label',
+                    isLight ? 'Switch to dark theme' : 'Switch to light theme',
+                );
+            }
+        }
+
+        function applyTheme(theme) {
+            document.documentElement.dataset.theme = theme;
+            syncThemeToggle();
+
+            try {
+                localStorage.setItem(THEME_STORAGE_KEY, theme);
+            } catch {
+                // Storage can be unavailable (private mode). The theme still
+                // applies for this page view; it just will not be remembered.
+            }
+        }
+
+        for (const toggle of themeToggles) {
+            toggle.addEventListener('click', () => {
+                applyTheme(currentTheme() === 'light' ? 'dark' : 'light');
+            });
+        }
+
+        // With no stored preference the app follows the OS. Once the user picks
+        // a theme explicitly, stop tracking the system so a manual choice is
+        // not silently overwritten.
+        systemScheme.addEventListener('change', (event) => {
+            let stored = null;
+            try {
+                stored = localStorage.getItem(THEME_STORAGE_KEY);
+            } catch {
+                /* ignore */
+            }
+            if (stored === 'light' || stored === 'dark') return;
+
+            document.documentElement.dataset.theme = event.matches ? 'light' : 'dark';
+            syncThemeToggle();
+        });
+
+        /* =====================================================================
            Boot
            ===================================================================== */
 
         showView('login');
         setStatus(false, 'Connecting…');
         updateCounter();
+        syncThemeToggle();
     </script>
 </body>
 

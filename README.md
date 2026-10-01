@@ -51,8 +51,10 @@ ticket before connecting. See [WebSocket authentication](#websocket-authenticati
   independently agree on a near-black base, one contrasting accent, tight radii
   and high-contrast monochrome type. Every colour pair is then checked against
   WCAG by a script that runs in CI.
-- **Dark and light, both first-class.** Two complete token sets, not one plus
-  inverted greys.
+- **Dark and light, with a toggle.** Two complete token sets, not one plus
+  inverted greys. The choice persists, defaults to the OS preference, and is
+  applied before first paint so there is no flash of the wrong theme. An
+  explicit choice is never overwritten by a later system change.
 - **Chat-native layout.** The page never scrolls; only the message list does.
   The composer is pinned to the bottom and grows with its content.
 - **Live presence.** Connection state, room member count, per-user status
