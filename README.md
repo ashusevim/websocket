@@ -741,21 +741,27 @@ Once the client and the API are on different hosts, tell the client where the
 API is by editing one line in `client/config.js`:
 
 ```js
-window.SERVER_HOST = 'api.ashusevim.dev';   // no scheme, no trailing slash
+window.SERVER_HOST = 'socketchatapi.ashusevim.dev';   // no scheme, no trailing slash
 ```
 
-Leave it empty for local development, where both run on localhost. The file
-exists so retargeting the client is a one-line change with no code edit and no
-rebuild of anything else.
+The file exists so retargeting the client is a one-line change with no code
+edit and no rebuild of anything else. It carries the *deployed* API's hostname:
+a static site has no build step, so there is no environment variable to read.
 
-There is also a query override, useful for testing a deploy before committing to
-a hostname:
+**Local development ignores it.** `resolveServerHost()` in `client/api.js` only
+honours `SERVER_HOST` when the page itself is not on localhost. Otherwise a
+localhost session would send its traffic to production — and to an origin the
+server's `ALLOWED_ORIGINS` refuses — so a local page talks to `localhost:8080`
+instead. That rule lives in `api.js` rather than inline precisely so it can be
+tested (`client/test/api.test.mjs`).
+
+To aim a local page at a remote API, or override either host, use the query
+parameter, which always wins:
 
 ```
-https://your-client.example.com/?server=api.example.com
+https://chat.ashusevim.dev/?server=api.example.com
+http://localhost:5500/?server=localhost:8081
 ```
-
-The query wins over `config.js`.
 
 ### Schema management
 
@@ -864,7 +870,7 @@ npm run test:db:down  # stop the throwaway container
 npm run typecheck
 ```
 
-**83 server tests + 11 client tests.** Node's built-in runner (`node --test`) —
+**83 server tests + 30 client tests.** Node's built-in runner (`node --test`) —
 no test framework dependency.
 
 | Suite | Tests | Covers |

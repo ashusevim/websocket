@@ -58,5 +58,101 @@
         }
     }
 
-    scope.ChatAPI = { readJSON };
+    /**
+     * Decides which host the client talks to.
+     *
+     * Order:
+     *   1. `?server=` query — always wins, so one page can be pointed at a
+     *      different API without editing anything
+     *   2. `window.SERVER_HOST`, but only when the page itself is deployed
+     *   3. localhost, for a local development session
+     *   4. the page's own host
+     *
+     * Condition 2 is the whole reason this is a function. `config.js` carries
+     * the *deployed* API's hostname, because a static site has no build step
+     * and therefore no environment variable. Honouring it on a localhost page
+     * would send development traffic to production — and to an origin the
+     * server's ALLOWED_ORIGINS list refuses, so it fails twice over. A local
+     * session reaches a remote API deliberately, via `?server=`.
+     *
+     * @param {object} input
+     * @param {string|null} input.query        the `server` query parameter
+     * @param {string} input.configured        window.SERVER_HOST
+     * @param {boolean} input.isProduction     page is not on localhost
+     * @param {string} input.pageHost          location.host of the page
+     * @param {string} [input.localHost]       dev API host, `localhost:8080`
+     * @returns {string} host, without a scheme
+     */
+    function resolveServerHost({ query, configured, isProduction, pageHost, localHost = "localhost:8080" }) {
+        if (query) return query;
+        if (!isProduction) return localHost;
+        if (typeof configured === "string" && configured) return configured;
+        return pageHost;
+    }
+
+    /**
+     * Rejections `fetch` produces when nothing was ever reached.
+     *
+     * These are the strings the three engines emit for a network or CORS
+     * failure on `fetch`. Matching them (rather than trusting `instanceof
+     * TypeError` alone) matters: a `TypeError` thrown by our own code — an
+     * invalid `new URL(...)`, a bad `new WebSocket(...)` — would otherwise be
+     * reported to the user as "cannot reach the API", which is both wrong and
+     * a good way to hide a real bug behind a config hint.
+     *
+     * An unrecognised wording falls through to the caller's raw message, which
+     * is exactly the behaviour this replaced. Degrading to the old message is
+     * harmless; swallowing a genuine error is not.
+     */
+    const NETWORK_FAILURE_PATTERNS = [
+        /failed to fetch/i, // Chrome, Edge
+        /networkerror/i, // Firefox
+        /network error/i, // Safari, older Firefox
+        /load failed/i, // Safari
+    ];
+
+    function isNetworkFailure(error) {
+        if (typeof TypeError === "undefined" || !(error instanceof TypeError)) {
+            return false;
+        }
+        const message = typeof error.message === "string" ? error.message : "";
+        return NETWORK_FAILURE_PATTERNS.some((pattern) => pattern.test(message));
+    }
+
+    /**
+     * Builds the message for a request that never reached anything.
+     *
+     * `fetch` rejects a network failure with a bare `Failed to fetch`, which
+     * the login form used to show verbatim. That tells the user nothing: they
+     * cannot tell a mis-set `window.SERVER_HOST` from an offline laptop, and
+     * the former is a one-line fix in a file they have never opened — the
+     * usual case the first time a client and API live on different hosts.
+     *
+     * Non-network errors pass through untouched, so "Invalid username or
+     * password" keeps its wording.
+     *
+     * @param {unknown} error  the rejection from the failing call
+     * @param {string} origin  what the client tried to reach, e.g. `https://x`
+     * @returns {string} a message safe to render to the user
+     */
+    function describeFailure(error, origin) {
+        if (isNetworkFailure(error)) {
+            return (
+                `Cannot reach the API at ${origin}. `
+                + "Check window.SERVER_HOST in client/config.js, and that the API "
+                + "service is running."
+            );
+        }
+        if (
+            error
+            && typeof error === "object"
+            && typeof error.message === "string"
+            && error.message
+        ) {
+            return error.message;
+        }
+        return "Cannot reach the server. Check your connection.";
+    }
+
+    scope.ChatAPI = { readJSON, resolveServerHost, describeFailure };
 })(typeof globalThis !== "undefined" ? globalThis : this);

@@ -423,31 +423,23 @@
         const wsProtocol = isProduction ? 'wss' : 'ws';
         const apiProtocol = isProduction ? 'https' : 'http';
 
-        /**
+        /*
          * Where the API and WebSocket server live.
          *
-         * Resolution order: `?server=` query parameter, then `window.SERVER_HOST`,
-         * then localhost in development, then same origin. A hardcoded hostname
-         * meant every rename or redeploy broke the client; the old value only
-         * worked because a previous deploy's URL had been edited into the source.
+         * The rule itself lives in api.js so it can be tested; it resolves
+         * `?server=` first, then window.SERVER_HOST on a deployed page, then
+         * localhost. See resolveServerHost for why SERVER_HOST is ignored on a
+         * localhost page.
          *
          * If you point this at a different host, add that origin to the server's
          * ALLOWED_ORIGINS or the handshake is refused with 403.
          */
-        function resolveServerHost() {
-            const fromQuery = new URLSearchParams(window.location.search).get('server');
-            if (fromQuery) return fromQuery;
-
-            if (typeof window.SERVER_HOST === 'string' && window.SERVER_HOST) {
-                return window.SERVER_HOST;
-            }
-
-            if (!isProduction) return 'localhost:8080';
-
-            return window.location.host;
-        }
-
-        const serverHost = resolveServerHost();
+        const serverHost = ChatAPI.resolveServerHost({
+            query: new URLSearchParams(window.location.search).get('server'),
+            configured: window.SERVER_HOST,
+            isProduction,
+            pageHost: window.location.host,
+        });
 
         const MAX_MESSAGE = 250;
 
@@ -833,11 +825,11 @@
                         data.message || 'Registration failed',
                     );
                 }
-            } catch {
+            } catch (error) {
                 showError(
                     document.getElementById('register-error'),
                     document.getElementById('register-error-text'),
-                    'Cannot reach the server. Check your connection.',
+                    ChatAPI.describeFailure(error, `${apiProtocol}://${serverHost}`),
                 );
             }
         }
@@ -888,7 +880,7 @@
                 showError(
                     document.getElementById('login-error'),
                     document.getElementById('login-error-text'),
-                    error.message,
+                    ChatAPI.describeFailure(error, `${apiProtocol}://${serverHost}`),
                 );
             }
         }

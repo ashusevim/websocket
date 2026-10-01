@@ -15,4 +15,4 @@
  * scheme: the client derives https/wss automatically, and a scheme here is the
  * most common cause of a connection that never opens.
  */
-window.SERVER_HOST = '';
+window.SERVER_HOST = 'socketchatapi.ashusevim.dev';
