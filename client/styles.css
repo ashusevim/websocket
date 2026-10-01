@@ -663,14 +663,30 @@ body:not([data-view="chat"]) #layout {
     height: 14px;
 }
 
-/* In dark, offer light: show the sun. */
-.icon-btn .icon-moon,
-:root[data-theme="light"] .icon-btn .icon-sun {
+/*
+   The icon reflects the user's PREFERENCE, not the resolved theme.
+
+   Default is "system" (monitor). Selecting light shows the sun, dark the
+   moon. Keying this off data-theme-preference rather than data-theme is what
+   lets "system" render dark while still showing a monitor, which is the honest
+   thing for it to show.
+*/
+.icon-btn .icon-sun,
+.icon-btn .icon-moon {
     display: none;
 }
 
-/* In light, offer dark: show the moon. */
-:root[data-theme="light"] .icon-btn .icon-moon {
+.icon-btn .icon-sys {
+    display: block;
+}
+
+:root[data-theme-preference="light"] .icon-btn .icon-sys,
+:root[data-theme-preference="dark"] .icon-btn .icon-sys {
+    display: none;
+}
+
+:root[data-theme-preference="light"] .icon-btn .icon-sun,
+:root[data-theme-preference="dark"] .icon-btn .icon-moon {
     display: block;
 }
 

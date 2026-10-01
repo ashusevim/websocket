@@ -20,21 +20,37 @@
       preference.
     -->
     <script>
+        /*
+         * Resolve the theme before first paint.
+         *
+         * Two attributes, deliberately separate:
+         *   data-theme           the RESOLVED theme (light|dark) — styles.css keys
+         *                         its tokens off this, so it must always be concrete
+         *   data-theme-preference the user's CHOICE (system|light|dark) — drives
+         *                         which icon the toggle shows
+         *
+         * Collapsing them would mean either CSS having to understand "system"
+         * or the toggle lying about what is on screen. With both, the "system"
+         * state can show a monitor icon while still rendering dark.
+         */
         (function () {
-            const STORAGE_KEY = 'chat-theme';
+            const root = document.documentElement;
             let stored = null;
             try {
-                stored = localStorage.getItem(STORAGE_KEY);
+                stored = localStorage.getItem('chat-theme');
             } catch {
                 // Private mode or blocked storage: fall back to the system.
             }
 
-            const system = window.matchMedia('(prefers-color-scheme: light)');
-            const theme = stored === 'light' || stored === 'dark'
+            const preference = stored === 'light' || stored === 'dark'
                 ? stored
-                : (system.matches ? 'light' : 'dark');
+                : 'system';
 
-            document.documentElement.dataset.theme = theme;
+            root.dataset.themePreference = preference;
+            root.dataset.theme =
+                preference === 'system'
+                    ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+                    : preference;
         })();
     </script>
     <link rel="icon"
@@ -58,6 +74,13 @@
     </div>
                 <button class="icon-btn" type="button" data-theme-toggle
                     aria-label="Switch theme" aria-pressed="false">
+<!-- Monitor: shown while following the system -->
+<svg class="icon-sys" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <rect x="2.6" y="3.6" width="18.8" height="12.4" rx="1.8" />
+    <line x1="8.6" y1="20.2" x2="15.4" y2="20.2" />
+    <line x1="12" y1="16" x2="12" y2="20.2" />
+</svg>
 <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
                             <circle cx="12" cy="12" r="4.2" />
@@ -137,6 +160,13 @@
     </div>
                 <button class="icon-btn" type="button" data-theme-toggle
                     aria-label="Switch theme" aria-pressed="false">
+<!-- Monitor: shown while following the system -->
+<svg class="icon-sys" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <rect x="2.6" y="3.6" width="18.8" height="12.4" rx="1.8" />
+    <line x1="8.6" y1="20.2" x2="15.4" y2="20.2" />
+    <line x1="12" y1="16" x2="12" y2="20.2" />
+</svg>
 <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
                             <circle cx="12" cy="12" r="4.2" />
@@ -252,6 +282,13 @@
                     <div class="header__actions">
                         <button class="icon-btn" type="button" data-theme-toggle
                             aria-label="Switch theme" aria-pressed="false">
+<!-- Monitor: shown while following the system -->
+<svg class="icon-sys" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <rect x="2.6" y="3.6" width="18.8" height="12.4" rx="1.8" />
+    <line x1="8.6" y1="20.2" x2="15.4" y2="20.2" />
+    <line x1="12" y1="16" x2="12" y2="20.2" />
+</svg>
 <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                     stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
                                     <circle cx="12" cy="12" r="4.2" />
@@ -966,30 +1003,78 @@
            ===================================================================== */
 
         const THEME_STORAGE_KEY = 'chat-theme';
-        const systemScheme = window.matchMedia('(prefers-color-scheme: light)');
+        const THEME_ORDER = ['system', 'light', 'dark'];
+        const THEME_LABELS = {
+            system: 'system',
+            light: 'light',
+            dark: 'dark',
+        };
 
-        function currentTheme() {
-            return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+        const systemScheme = window.matchMedia('(prefers-color-scheme: light)');
+        const root = document.documentElement;
+
+        function currentPreference() {
+            const value = root.dataset.themePreference;
+            return THEME_ORDER.includes(value) ? value : 'system';
         }
 
-        /** Keeps every toggle's accessible name and state describing the next action. */
-        function syncThemeToggle() {
-            const isLight = currentTheme() === 'light';
-            for (const toggle of themeToggles) {
-                toggle.setAttribute('aria-pressed', String(isLight));
-                toggle.setAttribute(
-                    'aria-label',
-                    isLight ? 'Switch to dark theme' : 'Switch to light theme',
-                );
+        /** What is actually on screen right now, which for "system" comes from the OS. */
+        function currentTheme() {
+            return root.dataset.theme === 'light' ? 'light' : 'dark';
+        }
+
+        function readStoredPreference() {
+            try {
+                const value = localStorage.getItem(THEME_STORAGE_KEY);
+                return THEME_ORDER.includes(value) ? value : null;
+            } catch {
+                return null;
             }
         }
 
-        function applyTheme(theme) {
-            document.documentElement.dataset.theme = theme;
+        /**
+         * Writes both attributes.
+         *
+         * data-theme-preference is what the user chose; data-theme is the
+         * concrete value styles.css needs. Splitting them is what lets the
+         * "system" state render correctly while the toggle still reports it
+         * honestly.
+         */
+        function resolveTheme(preference) {
+            root.dataset.themePreference = preference;
+            root.dataset.theme = preference === 'system'
+                ? (systemScheme.matches ? 'light' : 'dark')
+                : preference;
+        }
+
+        /** The accessible name reports the current state and the next action. */
+        function syncThemeToggle() {
+            const preference = currentPreference();
+            const resolved = currentTheme();
+
+            const stateText = preference === 'system'
+                ? `system (currently ${resolved})`
+                : THEME_LABELS[preference];
+
+            const next = THEME_ORDER[(THEME_ORDER.indexOf(preference) + 1) % THEME_ORDER.length];
+            const description = `Theme: ${stateText}. Switch to ${THEME_LABELS[next]} theme`;
+
+            for (const toggle of themeToggles) {
+                // Three states, so aria-pressed (a boolean) no longer describes
+                // it. The accessible name carries the state instead.
+                toggle.removeAttribute('aria-pressed');
+                toggle.setAttribute('aria-label', description);
+                toggle.setAttribute('title', description);
+                toggle.dataset.preference = preference;
+            }
+        }
+
+        function applyTheme(preference) {
+            resolveTheme(preference);
             syncThemeToggle();
 
             try {
-                localStorage.setItem(THEME_STORAGE_KEY, theme);
+                localStorage.setItem(THEME_STORAGE_KEY, preference);
             } catch {
                 // Storage can be unavailable (private mode). The theme still
                 // applies for this page view; it just will not be remembered.
@@ -998,25 +1083,24 @@
 
         for (const toggle of themeToggles) {
             toggle.addEventListener('click', () => {
-                applyTheme(currentTheme() === 'light' ? 'dark' : 'light');
+                const next = THEME_ORDER[
+                    (THEME_ORDER.indexOf(currentPreference()) + 1) % THEME_ORDER.length
+                ];
+                applyTheme(next);
             });
         }
 
-        // With no stored preference the app follows the OS. Once the user picks
-        // a theme explicitly, stop tracking the system so a manual choice is
-        // not silently overwritten.
-        systemScheme.addEventListener('change', (event) => {
-            let stored = null;
-            try {
-                stored = localStorage.getItem(THEME_STORAGE_KEY);
-            } catch {
-                /* ignore */
-            }
-            if (stored === 'light' || stored === 'dark') return;
-
-            document.documentElement.dataset.theme = event.matches ? 'light' : 'dark';
+        // Following the system means reacting to it. Once a choice is stored,
+        // stop: an explicit preference must not be silently overwritten.
+        systemScheme.addEventListener('change', () => {
+            if (currentPreference() !== 'system') return;
+            resolveTheme('system');
             syncThemeToggle();
         });
+
+        // The tab is restored from bfcache with its attributes intact, so
+        // re-sync labels in case the stored preference changed elsewhere.
+        window.addEventListener('pageshow', syncThemeToggle);
 
         /* =====================================================================
            Boot
