@@ -1,53 +1,91 @@
+# Render blueprint — full-stack WebSocket chat.
+#
+# Deploy: push this branch, then in Render choose "New +" → "Blueprint" and
+# point it at the repo. Render reads this file and creates both services plus
+# the database.
+#
+# After the first deploy, apply the schema once (see MIGRATION below).
+
 services:
+  # --- API + WebSocket server -------------------------------------------
   - type: web
     name: websocket-chat-server
-    env: docker
+    runtime: docker
     dockerfilePath: ./server/Dockerfile
-    dockerContext: ./server  # Add this line!
+    dockerContext: ./server
     plan: free
     healthCheckPath: /health
+    # Free instances sleep after inactivity and are restarted roughly monthly,
+    # which is why ALLOWED_ORIGINS and the client's server URL are configuration
+    # rather than hardcoded values.
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 10000
+      # Render injects PORT and routes traffic to whatever the process listens
+      # on. The server reads PORT from the environment and defaults to 8080.
       - key: JWT_SECRET
         generateValue: true
-      - key: DB_USER
+      - key: DATABASE_URL
         fromDatabase:
           name: websocket-chat-db
-          property: user
-      - key: DB_PASSWORD
-        fromDatabase:
-          name: websocket-chat-db
-          property: password
-      - key: DB_HOST
-        fromDatabase:
-          name: websocket-chat-db
-          property: host
-      - key: DB_PORT
-        fromDatabase:
-          name: websocket-chat-db
-          property: port
-      - key: DB_NAME
-        fromDatabase:
-          name: websocket-chat-db
-          property: database
+          property: connectionString
+      # Must list the client's exact origin. A ws:// or wss:// entry is wrong
+      # here: the Origin header is always http/https, even on a wss connection.
+      # Replace with your real client URL after the first deploy.
+      - key: ALLOWED_ORIGINS
+        sync: false
 
+  # --- Static client ----------------------------------------------------
   - type: web
     name: websocket-chat-client
-    env: static
+    runtime: static
     staticPublishPath: ./client
-    headers:
-      - path: /*
-        name: Cache-Control
-        value: no-cache
+    buildCommand: ""
     routes:
       - type: rewrite
         source: /*
         destination: /index.html
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
+      # The client loads no third-party scripts or styles, so the policy can
+      # stay tight. 'unsafe-inline' covers the inline <style>/<script> in
+      # index.html; frame-ancestors 'none' blocks clickjacking.
+      - path: /*
+        name: Content-Security-Policy
+        value: >-
+          default-src 'self';
+          script-src 'self' 'unsafe-inline';
+          style-src 'self' 'unsafe-inline';
+          connect-src 'self' https: wss:;
+          img-src 'self' data:;
+          base-uri 'none';
+          frame-ancestors 'none'
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer
 
 databases:
-  - name: websocket-chat-db
+  - type: db
+    name: websocket-chat-db
     plan: free
-    ipAllowList: [] # only allow internal connections
+    # Empty allowlist means no external connections: only services inside this
+    # Render account can reach the database.
+    ipAllowList: []
+    postgresMajorVersion: "16"
+
+# MIGRATION
+# ----------
+# Render does not run schema.sql automatically. On a fresh database the server
+# starts fine but every write fails with 500, because the tables do not exist.
+# Apply the schema once, from your machine, after the database is created:
+#
+#   psql "<the database's internal connection string>" -f server/schema.sql
+#
+# Copy that string from the Render dashboard: the database's "Connection"
+# dropdown → "Internal Connection String". The schema is idempotent, so
+# re-running it is safe.

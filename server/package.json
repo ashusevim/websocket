@@ -1,19 +1,28 @@
 {
-  "name": "socket.io",
+  "name": "websocket-chat-server",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Real-time WebSocket chat server with JWT auth (Express + ws + PostgreSQL)",
+  "main": "dist/src/index.js",
   "scripts": {
     "dev:watch": "tsc -w",
-    "start:watch": "nodemon dist/index.js",
+    "start:watch": "nodemon dist/src/index.js",
     "dev:hot": "concurrently \"npm run dev:watch\" \"npm run start:watch\"",
     "build": "tsc",
-    "start": "node dist/index.js"
-},
+    "start": "node dist/src/index.js",
+    "typecheck": "tsc --noEmit",
+    "test:unit": "npm run build && node --test dist/test/utils.test.js dist/test/tickets.test.js",
+    "test:db": "node scripts/test-db.mjs up",
+    "test:db:down": "node scripts/test-db.mjs down",
+    "test:integration": "npm run test:db && npm run build && node scripts/run-integration.mjs",
+    "test": "npm run test:unit && npm run test:integration"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "@sentry/node": "^10.19.0",
     "@sentry/profiling-node": "^10.19.0",
@@ -36,7 +45,9 @@
     "@types/express": "^5.0.3",
     "@types/node": "^24.3.1",
     "@types/pg": "^8.15.5",
+    "@types/supertest": "^7.2.1",
     "@types/ws": "^8.18.1",
+    "supertest": "^7.3.0",
     "typescript": "^5.9.2"
   }
 }

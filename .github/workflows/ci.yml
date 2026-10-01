@@ -1,0 +1,97 @@
+name: CI
+
+# Quoted: an unquoted `on` is parsed as boolean true by YAML 1.1 tools, which
+# silently breaks linters and `yq` queries. GitHub's own parser is fine either
+# way, but the quote costs nothing.
+'on':
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A new push to the same branch cancels the previous run: no point paying for
+# a superseded build.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Typecheck, test, audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Matches server/package.json "engines" and the Dockerfile base image.
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      # bcrypt ships prebuilt binaries; audit=high fails the job if install
+      # scripts are ever blocked, which would surface here rather than as a
+      # confusing test failure.
+      - name: Install
+        working-directory: server
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: server
+        run: npm run typecheck
+
+      # The integration suite needs a real Postgres: the 409 path depends on a
+      # unique constraint and logout revocation depends on a row delete, so a
+      # mock would not exercise either. GitHub runners have Docker, so the same
+      # `npm run test:db` used locally provides it.
+      - name: Unit tests
+        working-directory: server
+        run: npm run test:unit
+
+      - name: Integration tests
+        working-directory: server
+        run: npm run test:integration
+
+      - name: Stop test database
+        if: always()
+        working-directory: server
+        run: npm run test:db:down
+
+      # Non-blocking, but the count is surfaced on every run so a new advisory
+      # cannot slip through unnoticed. Promote `continue-on-error: false` once
+      # the backlog is clear.
+      - name: Dependency audit
+        working-directory: server
+        continue-on-error: true
+        run: npm audit --audit-level=critical
+
+  docker:
+    name: Docker image builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # The image is the deployment artifact, so a broken Dockerfile should fail
+      # here rather than during a Render deploy.
+      - name: Build image
+        run: docker build -t websocket-chat:ci ./server
+
+      - name: Verify image layout
+        run: |
+          set -euo pipefail
+          # Entrypoint, schema (applied at boot) and non-root user are all
+          # load-bearing. Assert them rather than trusting the build to be
+          # enough.
+          docker run --rm --entrypoint sh websocket-chat:ci -c '
+            test -f /app/dist/src/index.js || { echo "missing entrypoint"; exit 1; }
+            test -f /app/schema.sql      || { echo "missing schema.sql";  exit 1; }
+            test "$(id -u)" != "0"        || { echo "running as root";     exit 1; }
+            echo "image layout OK"
+          '
