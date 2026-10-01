@@ -295,7 +295,10 @@
         });
 
         let socket;
-        const isProduction = window.location.hostname !== 'localhost';
+        // `127.0.0.1` is a local address too — matching only 'localhost' sent
+        // local traffic over https/wss to a plain-http server.
+        const LOCAL_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
+        const isProduction = !LOCAL_HOSTS.includes(window.location.hostname);
         const wsProtocol = isProduction ? 'wss' : 'ws';
         const apiProtocol = isProduction ? 'https' : 'http';
         const serverHost = isProduction ? 'websocket-chat-server-ptfw.onrender.com' : 'localhost:8080';
@@ -314,9 +317,47 @@
         let reconnectionInterval = 5000;
         let maxReconnectionInterval = 30000;
 
-        function connect(token, username) {
-            const wsUrl = `${wsProtocol}://${serverHost}?token=${token}`;
-            console.log('Attempting to connect to:', wsUrl);
+        /**
+         * Trades the JWT for a short-lived, single-use ticket, then connects
+         * with the ticket instead of the JWT.
+         *
+         * The JWT travels in an Authorization header over HTTPS, so it never
+         * lands in a URL — and URLs are what access logs, proxies and browser
+         * history record. The ticket is worthless if leaked: it expires in
+         * seconds and is destroyed on first use.
+         */
+        async function fetchTicket(jwt) {
+            const response = await fetch(`${apiProtocol}://${serverHost}/ws-ticket`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${jwt}`,
+                },
+            });
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.message || 'Could not authorise connection');
+            }
+
+            return (await response.json()).ticket;
+        }
+
+        async function connect(token, username) {
+            let ticket;
+            try {
+                ticket = await fetchTicket(token);
+            } catch (error) {
+                // A rejected ticket means the session is gone (expired or
+                // logged out). Retrying would just loop, so stop and surface it.
+                console.error('Ticket exchange failed:', error);
+                shouldReconnect = false;
+                setStatus(false);
+                statusText.textContent = 'Session expired';
+                return;
+            }
+
+            const wsUrl = `${wsProtocol}://${serverHost}?ticket=${encodeURIComponent(ticket)}`;
             socket = new WebSocket(wsUrl);
 
             socket.onopen = () => {
