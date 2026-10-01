@@ -51,6 +51,13 @@ ticket before connecting. See [WebSocket authentication](#websocket-authenticati
   independently agree on a near-black base, one contrasting accent, tight radii
   and high-contrast monochrome type. Every colour pair is then checked against
   WCAG by a script that runs in CI.
+- **The favicon is the app's own mark, not a default.** `client/favicon.svg`
+  redraws the speech bubble from the sign-in screen as a filled silhouette on
+  the accent tile — the stroked header version loses its dots below ~32px. SVG
+  rather than `favicon.ico` so nothing binary is committed, and the tile colour
+  is pinned to the dark theme's `--accent` by a test: the palette has two
+  accents, and a favicon can only carry one, so the brighter of the pair is the
+  one that reads on both light and dark tab strips.
 - **Dark, light, or system — with a toggle.** Three-state cycle on every screen,
   including before sign-in. Two complete token sets rather than one plus
   inverted greys. The choice persists, is applied before first paint so there is
@@ -132,6 +139,7 @@ websocket/
 │   ├── test/
 │   │   ├── utils.test.ts       # Unit: validation + sanitize
 │   │   ├── tickets.test.ts     # Unit: ticket issue/consume/expiry
+│   │   ├── origins.test.ts     # Unit: allowlist parsing + rejection
 │   │   └── integration.test.ts # Real HTTP + WS against real Postgres
 │   ├── scripts/
 │   │   ├── test-db.mjs         # Throwaway Postgres for tests
@@ -142,7 +150,12 @@ websocket/
 │   └── tsconfig.json
 ├── client/
 │   ├── index.html            # Chat UI with login/register
-│   └── styles.css
+│   ├── styles.css            # Two complete token sets, keyed off <html data-theme>
+│   ├── api.js                # Body reading, host resolution, failure wording
+│   ├── config.js             # Deployed API host (one-line retarget)
+│   ├── favicon.svg           # SVG mark; tile colour pinned to --accent
+│   └── test/
+│       └── client.test.mjs   # Unit: response bodies, host rules, markup gates
 ├── render.yaml               # Render deployment config
 └── README.md
 ```
@@ -753,7 +766,7 @@ honours `SERVER_HOST` when the page itself is not on localhost. Otherwise a
 localhost session would send its traffic to production — and to an origin the
 server's `ALLOWED_ORIGINS` refuses — so a local page talks to `localhost:8080`
 instead. That rule lives in `api.js` rather than inline precisely so it can be
-tested (`client/test/api.test.mjs`).
+tested (`client/test/client.test.mjs`).
 
 To aim a local page at a remote API, or override either host, use the query
 parameter, which always wins:
@@ -870,7 +883,7 @@ npm run test:db:down  # stop the throwaway container
 npm run typecheck
 ```
 
-**83 server tests + 30 client tests.** Node's built-in runner (`node --test`) —
+**83 server tests + 33 client tests.** Node's built-in runner (`node --test`) —
 no test framework dependency.
 
 | Suite | Tests | Covers |
@@ -879,9 +892,12 @@ no test framework dependency.
 | `tickets.test.ts` | 9 | Issue, consume, single-use, expiry, sweep |
 | `origins.test.ts` | 20 | Allowlist parsing, normalisation, rejection |
 | `integration.test.ts` | 38 | Real HTTP + WebSocket against real Postgres |
+| `client/client.test.mjs` | 33 | Response bodies, failure wording, host rules, markup gates |
 
-The client suite runs from the repo root and covers response-body handling
-(`client/test/api.test.mjs`):
+The client suite runs from the repo root and covers response-body handling,
+host resolution, and source gates on the markup itself — the favicon link, that
+`favicon.svg` still parses, and that no call site regressed (the defects that
+suite exists for are all the kind where nothing else would fail):
 
 ```bash
 npm run test:client
@@ -945,6 +961,16 @@ Each of these was a real bug, and each has a test that fails without the fix:
   connect. The list is configuration only now: an unset `ALLOWED_ORIGINS` fails
   at boot naming the variable, and each entry is validated and normalised to
   what the browser will actually send. `origins.test.ts` covers all of it.
+- **An empty 200 became the login error** — `Login` called `response.json()`
+  with no guard, so a 2xx with an empty body threw `SyntaxError: Unexpected end
+  of JSON input` and the catch rendered that parser message to the user. Fixed
+  with `ChatAPI.readJSON`, plus a count gate: a single stray `.json()` on a
+  success path reintroduces it silently, because nothing else fails.
+- **The favicon rendered as a broken image** — `favicon.svg` carried a doubled
+  hyphen inside an XML comment. Legal-looking, fatal: the parser rejects the
+  whole document, and browsers report that as a missing image rather than a
+  parse error, so nothing appeared in the console. The suite now parses the
+  comment bodies, checks the icon link, and pins the tile colour to `--accent`.
 
 Not every regression belongs in the server suite. **The Blueprint rejected on
 deploy** — `render.yaml` declared `type: db` under `databases`, a key that does

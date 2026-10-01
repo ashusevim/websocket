@@ -8,6 +8,13 @@
     <meta name="color-scheme" content="dark light" />
     <meta name="description" content="Real-time chat over WebSockets with JWT authentication." />
     <title>Realtime Chat</title>
+    <!--
+      SVG only, deliberately. The tile colour must match the accent token in
+      styles.css; client/test/client.test.mjs fails if they drift apart, and if
+      the file stops parsing — a doubled hyphen inside an XML comment will do
+      it, which browsers report as a broken image rather than a parse error.
+    -->
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="styles.css" />
 
     <!--

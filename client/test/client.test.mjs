@@ -237,3 +237,89 @@ test("index.html resolves the host through the helper, not inline", async () => 
         "index.html re-inlined host resolution; it lives in api.js so it can be tested",
     );
 });
+
+/*
+ * The favicon.
+ *
+ * Node has no XML parser and adding one to parse a 30-line file would be a
+ * worse trade than checking the two ways an SVG actually breaks in a browser:
+ * a `--` inside an XML comment (legal-looking, fatal — the parser refuses the
+ * whole document) and a missing or malformed root. Neither shows up as a
+ * console error a reviewer would notice; the browser just renders a broken
+ * image placeholder. That is exactly what happened during development.
+ */
+const FAVICON_PATH = path.join(CLIENT_DIR, "favicon.svg");
+
+async function loadFavicon() {
+    return readFile(FAVICON_PATH, "utf8");
+}
+
+test("index.html declares the favicon", async () => {
+    const html = await readFile(path.join(CLIENT_DIR, "index.html"), "utf8");
+    const link = html.match(/<link[^>]*rel="icon"[^>]*>/);
+    assert.ok(link, "index.html has no <link rel=\"icon\">; browsers fall back to a 404 /favicon.ico");
+    assert.match(link[0], /href="favicon\.svg"/, "the icon link does not point at favicon.svg");
+    assert.match(link[0], /type="image\/svg\+xml"/, "the icon link omits type=\"image/svg+xml\"");
+    assert.ok(
+        html.indexOf(link[0]) < html.indexOf("</head>"),
+        "the icon link sits outside <head>",
+    );
+});
+
+test("favicon.svg parses as XML", async () => {
+    const svg = await loadFavicon();
+
+    // The root element. Anything else (a stray <div>, a stray "<") and the
+    // browser shows nothing at all.
+    assert.match(svg.trim(), /^<svg\b/, "favicon.svg does not start with <svg");
+
+    // Comment bodies may not contain "--": XML forbids it, and the resulting
+    // parser error kills the document rather than the comment.
+    const comments = svg.match(/<!--([\s\S]*?)-->/g) ?? [];
+    assert.ok(comments.length > 0, "favicon.svg lost its design comment");
+    for (const comment of comments) {
+        const body = comment.replace(/^<!--/, "").replace(/-->$/, "");
+        assert.equal(
+            body.includes("--"),
+            false,
+            "an XML comment contains \"--\", which makes the whole file unparseable in a browser",
+        );
+    }
+
+    // Every shape self-closes and both containers close. A missed "/" or a
+    // stray "</g>" is otherwise invisible until the browser drops the artwork.
+    for (const shape of svg.match(/<(rect|path|circle)\b[^>]*>/g) ?? []) {
+        assert.ok(shape.endsWith("/>"), `shape does not self-close: ${shape.slice(0, 40)}...`);
+    }
+    for (const container of ["svg", "g"]) {
+        assert.equal(
+            (svg.match(new RegExp(`<${container}\\b`, "g")) ?? []).length,
+            (svg.match(new RegExp(`</${container}>`, "g")) ?? []).length,
+            `<${container}> is not balanced`,
+        );
+    }
+    assert.match(svg, /viewBox="0 0 64 64"/, "favicon.svg is missing its 64x64 viewBox");
+});
+
+test("the favicon tile colour matches the accent token", async () => {
+    // The tile has to be one fixed colour while the app has two — light and
+    // dark both carry their own --accent (#8a6d1f would vanish on a dark tab
+    // strip). The dark value is the brighter of the two and reads on either
+    // strip, so it is the one the favicon uses, and this test fails if the
+    // palette moves and nobody redraws the icon with it.
+    const svg = await loadFavicon();
+    const css = await readFile(path.join(CLIENT_DIR, "styles.css"), "utf8");
+
+    const tile = svg.match(/<rect[^>]*fill="(#[0-9a-fA-F]{6})"/);
+    assert.ok(tile, "favicon.svg has no filled background tile");
+
+    const accents = css.match(/--accent:\s*(#[0-9a-fA-F]{6})/g) ?? [];
+    assert.ok(accents.length >= 2, "styles.css should define --accent for both themes");
+    const darkAccent = accents[0].match(/#[0-9a-fA-F]{6}/)[0];
+
+    assert.equal(
+        tile[1].toLowerCase(),
+        darkAccent.toLowerCase(),
+        `favicon tile ${tile[1]} drifted from the dark theme accent ${darkAccent}`,
+    );
+});
