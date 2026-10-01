@@ -2,7 +2,7 @@ import "./instrument.js";
 import * as Sentry from "@sentry/node";
 import pool, { applySchema } from "./db.js";
 import logger from "./logger.js";
-import { createChatServer } from "./app.js";
+import { createChatServer, resolveOrigins } from "./app.js";
 
 /**
  * Process entrypoint.
@@ -19,6 +19,17 @@ if (!secret) {
     logger.error(
         "JWT_SECRET is not set. Generate one with: openssl rand -hex 32",
     );
+    process.exit(1);
+}
+
+// Checked here rather than left to throw inside createChatServer, so a missing
+// or malformed allowlist reads as one line in the deploy log instead of a stack
+// trace. resolveOrigins throws on purpose: an empty allowlist would refuse
+// every connection while still passing the health check.
+try {
+    logger.info(`Origin allowlist: ${resolveOrigins(process.env).join(", ")}`);
+} catch (error) {
+    logger.error(error instanceof Error ? error.message : error);
     process.exit(1);
 }
 

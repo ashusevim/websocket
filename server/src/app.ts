@@ -31,14 +31,6 @@ interface AuthenticatedRequest {
     username: string;
 }
 
-const defaultOrigins = [
-    "http://127.0.0.1:5500",
-    "http://localhost:8080",
-    "http://localhost:5500",
-    "https://websocket-chat-client-ptfw.onrender.com",
-    "https://websocket-chat-server-ptfw.onrender.com",
-];
-
 /**
  * Resolves the allowed-origin list.
  *
@@ -46,15 +38,73 @@ const defaultOrigins = [
  * to be two hand-maintained arrays that drifted apart: the handshake checked
  * `allowedOrigins` while `wsAllowedOrigins` sat beside it, unused, under a
  * comment claiming it was in use. One list, one check.
+ *
+ * There is deliberately no default list. A previous deployment's hostnames in
+ * source go stale the moment the service is recreated, and an allowlist that
+ * silently contains the wrong origins fails as an unexplained 403 rather than
+ * as a startup error. The list is configuration or it does not exist.
+ *
+ * @throws when no usable origin is configured, or when one is not an absolute
+ *         http(s) origin. Both are startup bugs, so both fail here rather than
+ *         at the first connection attempt.
  */
 export function resolveOrigins(env: NodeJS.ProcessEnv = process.env): string[] {
-    const configured = env.ALLOWED_ORIGINS;
-    if (!configured) return defaultOrigins;
-
-    return configured
+    const configured = env.ALLOWED_ORIGINS ?? "";
+    const entries = configured
         .split(",")
         .map((origin) => origin.trim())
         .filter(Boolean);
+
+    if (entries.length === 0) {
+        throw new Error(
+            "ALLOWED_ORIGINS is not set, so there is no origin allowlist and " +
+            "every cross-origin request and WebSocket upgrade would be refused. " +
+            "Set it to the client's exact origin, for local development " +
+            "ALLOWED_ORIGINS=http://localhost:5500",
+        );
+    }
+
+    const origins: string[] = [];
+    for (const entry of entries) {
+        let parsed: URL;
+        try {
+            parsed = new URL(entry);
+        } catch {
+            throw new Error(
+                `ALLOWED_ORIGINS entry "${entry}" is not a URL. Expected an ` +
+                "absolute origin such as https://chat.example.com",
+            );
+        }
+
+        // The Origin header a browser sends is http/https with no path. A
+        // ws:// or wss:// value can never match it, and "localhost:5500" parses
+        // as scheme "localhost:" rather than failing — so both are startup
+        // errors here rather than a 403 later that looks like a CORS problem.
+        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+            throw new Error(
+                `ALLOWED_ORIGINS entry "${entry}" must be an absolute http:// or ` +
+                `https:// origin; its scheme parsed as "${parsed.protocol}". The ` +
+                "Origin header stays http/https even for a wss:// connection, so " +
+                "ws:// and wss:// values can never match.",
+            );
+        }
+
+        // A path, query or fragment can never appear in an Origin header.
+        if (parsed.pathname !== "/" || parsed.search || parsed.hash) {
+            throw new Error(
+                `ALLOWED_ORIGINS entry "${entry}" must be a bare origin with no ` +
+                `path, query or fragment. Use "${parsed.origin}".`,
+            );
+        }
+
+        // Normalise to what the browser will actually send: lowercased scheme
+        // and host, no default port, no trailing slash. Comparisons are exact
+        // string matches, so storing the canonical form removes a whole class
+        // of "it looks right but never matches".
+        origins.push(parsed.origin);
+    }
+
+    return [...new Set(origins)];
 }
 
 export interface AppOptions {

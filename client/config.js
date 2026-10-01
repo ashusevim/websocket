@@ -7,9 +7,9 @@
  * on different ports.
  *
  * Examples:
- *   window.SERVER_HOST = 'api.ashusevim.dev';       // custom domain
- *   window.SERVER_HOST = 'websocket-chat-server-ptfw.onrender.com'; // default Render
- *   window.SERVER_HOST = '';                        // same origin as the page
+ *   window.SERVER_HOST = 'api.example.com';          // custom domain
+ *   window.SERVER_HOST = 'websocket-chat-server-abc123.onrender.com'; // Render
+ *   window.SERVER_HOST = '';                         // same origin as the page
  *
  * A host may include a port for local work ("localhost:8080"). Do not include a
  * scheme: the client derives https/wss automatically, and a scheme here is the
