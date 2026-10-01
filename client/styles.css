@@ -1,87 +1,75 @@
 /* ==========================================================================
-   Real-time chat — design system
-   ==========================================================================
+   Realtime Chat — client styles
 
-   No framework and no webfont on purpose. The Content-Security-Policy shipped
-   in render.yaml is `default-src 'self'`, so a Google Fonts link would be
-   blocked outright, and a chat client that works offline is worth more than a
-   typeface. Hierarchy comes from weight, tracking and colour instead.
+   Design direction is taken from real production references in the inspo
+   archive, not generated. Six dark product/developer apps (Linear, Bun,
+   Algolia, Superlist, CodePen, Apple Developer) agree on the same traits, and
+   Linear is the archetype:
 
-   Layout contract: the page itself never scrolls. Only the message list does.
+     · near-black charcoal base, no hue tint
+     · one accent that CONTRASTS in hue with the base, used sparingly
+     · monochrome + muted + high-contrast type
+     · border radius 2-6px, not the large soft radii a generated palette picks
+     · 4px spacing base, tight negative tracking, line-height ~1.05 on display
+     · "expansive negative space", minimal visual embellishment
+
+   The previous iteration was soft violet-on-indigo with 28px radii and large
+   coloured glows. That is the opposite of this reference set, and it is why
+   this file looks deliberately austere.
+
+   Colour tokens: every pair is computed by client/scripts/check-contrast.mjs,
+   which runs in CI. Do not hand-edit a colour without re-running it.
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
    1. Tokens
-
-   Generated with the ui-ux-pro-max design system engine (pattern
-   "Real-Time / Operations", style "Soft UI Evolution"), then corrected against
-   real measurements: client/scripts/check-contrast.mjs computes every pair
-   below. Two values differ from the generator's suggestion because its palette
-   failed its own checklist — see the note on --accent. Do not hand-edit a
-   colour without re-running that script.
    -------------------------------------------------------------------------- */
 
 :root {
     color-scheme: dark;
 
-    /* Surfaces, darkest to lightest */
-    --bg: #08070f;
-    --bg-glow-a: rgba(126, 121, 245, 0.17);
-    --bg-glow-b: rgba(4, 120, 87, 0.12);
-    --shell: rgba(255, 255, 255, 0.030);
-    --surface: #12102a;
-    --surface-2: #1b1838;
-    --surface-3: #262247;
+    --bg: #0a0a0b;
+    --surface: #111113;
+    --surface-2: #191920;
+    --surface-3: #24242e;
 
-    /* Hairlines, not borders. A 1px solid grey line reads as a default. */
-    --hairline: rgba(237, 234, 251, 0.090);
-    --hairline-strong: rgba(237, 234, 251, 0.170);
+    --hairline: #2a2a33;
+    --hairline-strong: #3a3a46;
 
-    /* Type. Every pair below is verified >= 4.5:1 against its surface. */
-    --text: #edeafb;
-    --text-dim: #b3add6;
-    --text-faint: #8c85b8;
+    --text: #f4f4f5;
+    --text-dim: #a8a8b3;
+    --text-faint: #86868f;
 
-    /* Accent: filled actions, links, focus, and the user's own messages.
-       The generator proposed #6366F1, which yields 4.47:1 with white text —
-       a hair under AA — so the filled action uses #5B54E8 (5.41:1) and the
-       dark-mode lift is #7C79F5, which keeps links legible on the dark card. */
-    --accent: #7c79f5;
-    --on-accent: #0b0a1f;
-    --accent-2: #6e6bf2;
-    --accent-soft: rgba(124, 121, 245, 0.16);
-    --accent-ring: rgba(124, 121, 245, 0.48);
+    /* Muted gold, the Linear accent family. Warm against a neutral-cool
+       charcoal base, which is what stops this reading as monochrome mush. */
+    --accent: #e3c778;
+    --accent-dim: #b8994f;
+    --on-accent: #0a0a0b;
+    --accent-ink: #e3c778;
+    --accent-wash: rgba(227, 199, 120, 0.10);
+    --accent-line: rgba(227, 199, 120, 0.38);
 
-    /* Status. Green is reserved for presence so a filled CTA can never be
-       mistaken for a status indicator. */
-    --success: #34d399;
-    --success-soft: rgba(52, 211, 153, 0.16);
-    --danger: #fb7185;
-    --danger-soft: rgba(251, 113, 133, 0.14);
-    --warn: #fbbf24;
+    --success: #5ee08a;
+    --success-wash: rgba(94, 224, 138, 0.10);
+    --danger: #ff8080;
+    --danger-wash: rgba(255, 128, 128, 0.10);
+    --warn: #e3c778;
 
-    /* Depth. Layered ambient light, never a single dark drop shadow. */
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.32);
-    --shadow-md: 0 8px 24px -8px rgba(0, 0, 0, 0.55);
-    --shadow-lg: 0 32px 64px -24px rgba(0, 0, 0, 0.72);
-
-    /* Concentric radii for the nested shell */
-    --r-shell: 28px;
-    --r-core: 22px;
-    --r-lg: 16px;
-    --r-md: 12px;
-    --r-sm: 9px;
+    /* Tight radii. The reference set uses 2-6px; only pills stay round. */
+    --r-xs: 3px;
+    --r-sm: 5px;
+    --r-md: 8px;
+    --r-lg: 10px;
     --r-pill: 999px;
 
-    /* Motion. The generator's guidance is 200-300ms; short feedback sits at the
-       fast end of that band, entrances at the slow end. */
-    --ease: cubic-bezier(0.32, 0.72, 0, 1);
-    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-    --t-fast: 150ms;
-    --t-base: 240ms;
-    --t-slow: 520ms;
+    /* Hairline-first depth: borders carry the structure, shadows only lift. */
+    --shadow-pop: 0 16px 40px -12px rgba(0, 0, 0, 0.7);
+    --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04);
 
-    /* The only z-indexes in the file. */
+    --ease: cubic-bezier(0.32, 0.72, 0, 1);
+    --t-fast: 120ms;
+    --t-base: 200ms;
+
     --z-grain: 1;
     --z-sticky: 2;
 }
@@ -90,38 +78,38 @@
     :root {
         color-scheme: light;
 
-        --bg: #f5f3ff;
-        --bg-glow-a: rgba(91, 84, 232, 0.14);
-        --bg-glow-b: rgba(4, 120, 87, 0.07);
-        --shell: rgba(49, 46, 129, 0.030);
+        --bg: #f7f7f8;
         --surface: #ffffff;
-        --surface-2: #ebefff;
-        --surface-3: #e0e7ff;
+        --surface-2: #f0f0f2;
+        --surface-3: #e4e4e8;
 
-        --hairline: rgba(49, 46, 129, 0.100);
-        --hairline-strong: rgba(49, 46, 129, 0.180);
+        --hairline: #e2e2e6;
+        --hairline-strong: #cfcfd6;
 
-        --text: #312e81;
-        --text-dim: #475569;
-        --text-faint: #5a6280;
+        --text: #0a0a0b;
+        --text-dim: #54545e;
+        --text-faint: #6b6b76;
 
-        --accent: #5b54e8;
-        --on-accent: #ffffff;
-        --accent-2: #4f46d8;
-        --accent-soft: rgba(91, 84, 232, 0.10);
-        --accent-ring: rgba(91, 84, 232, 0.40);
+        /* A darker bronze in light mode: the gold is far too light to carry
+           text on white. */
+        --accent: #8a6d1f;
+        --accent-dim: #6f5718;
+        --on-accent: #fffdf5;
+        --accent-ink: #8a6d1f;
+        --accent-wash: rgba(138, 109, 31, 0.08);
+        --accent-line: rgba(138, 109, 31, 0.34);
 
-        --success: #047857;
-        --success-soft: rgba(4, 120, 87, 0.10);
-        --danger: #b91c1c;
-        --danger-soft: rgba(185, 28, 28, 0.09);
-        --warn: #b45309;
+        --success: #146c43;
+        --success-wash: rgba(20, 108, 67, 0.08);
+        --danger: #b42318;
+        --danger-wash: rgba(180, 35, 24, 0.07);
+        --warn: #8a6d1f;
 
-        --shadow-sm: 0 1px 2px rgba(49, 46, 129, 0.07);
-        --shadow-md: 0 10px 28px -12px rgba(49, 46, 129, 0.16);
-        --shadow-lg: 0 32px 64px -28px rgba(49, 46, 129, 0.22);
+        --shadow-pop: 0 16px 40px -16px rgba(10, 10, 11, 0.22);
+        --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.9);
     }
 }
+
 /* --------------------------------------------------------------------------
    2. Reset
    -------------------------------------------------------------------------- */
@@ -139,47 +127,31 @@ body {
 
 body {
     margin: 0;
-    font-family: system-ui, -apple-system, "Segoe UI Variable Text",
-        "Segoe UI", "Noto Sans", sans-serif;
-    font-size: 15px;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI Variable Text",
+        "Segoe UI", Roboto, "Noto Sans", sans-serif;
+    font-size: 14px;
     line-height: 1.5;
     color: var(--text);
     background: var(--bg);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
 }
 
-/*
-   Ambient light. Two soft orbs, fixed, so the colour never scrolls with the
-   content. The previous gradient hard-coded a dark slate in the body rule, so
-   light mode inherited a grey smear across the top-left corner.
-*/
+/* A single faint vignette. The reference set is stark — no coloured orbs. */
 body::before {
     content: "";
     position: fixed;
-    inset: -20vmax;
+    inset: 0;
     z-index: 0;
     pointer-events: none;
-    background:
-        radial-gradient(38vmax 38vmax at 22% 12%, var(--bg-glow-a), transparent 62%),
-        radial-gradient(32vmax 32vmax at 84% 88%, var(--bg-glow-b), transparent 60%);
-}
-
-/* Film grain. Fixed and inert, so it costs one composited layer. */
-body::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: var(--z-grain);
-    pointer-events: none;
-    opacity: 0.032;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+    background: radial-gradient(120% 80% at 50% 0%,
+            rgba(255, 255, 255, 0.028), transparent 58%);
 }
 
 @media (prefers-color-scheme: light) {
-    body::after {
-        opacity: 0.020;
+    body::before {
+        background: radial-gradient(120% 80% at 50% 0%,
+                rgba(255, 255, 255, 0.9), transparent 60%);
     }
 }
 
@@ -209,77 +181,27 @@ ul {
     list-style: none;
 }
 
-:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-    border-radius: var(--r-sm);
-}
-
-.visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-    border: 0;
-}
-
-/*
-   The `hidden` attribute is how the three views are toggled, but the UA rule
-   for it loses to any class selector that sets `display`. Views below set
-   `display: flex`, so this is what actually keeps a hidden view hidden.
-*/
 [hidden] {
     display: none !important;
 }
 
-/* --------------------------------------------------------------------------
-   3. The double bezel
-
-   Every major surface is a shell wrapped around a core, with concentric radii.
-   The shell carries the ambient colour and the outer hairline; the core
-   carries the content and an inset top highlight. This is what makes a card
-   read as a machined plate rather than a rectangle with a border.
-   -------------------------------------------------------------------------- */
-
-.shell {
-    position: relative;
-    z-index: 1;
-    padding: 6px;
-    border-radius: var(--r-shell);
-    background: var(--shell);
-    box-shadow: var(--shadow-lg), inset 0 1px 0 var(--hairline-strong);
-}
-
-.shell__core {
-    border-radius: var(--r-core);
-    background: var(--surface);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
-    overflow: hidden;
-}
-
-@media (prefers-color-scheme: light) {
-    .shell__core {
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
-    }
+:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--r-xs);
 }
 
 /* --------------------------------------------------------------------------
-   4. Auth
+   3. Auth
    -------------------------------------------------------------------------- */
 
-/* The auth stage is a centred card on its own; the chat stage owns the whole
-   viewport. Exactly one is mounted at a time, driven by body[data-view]. */
 .auth-wrap {
     min-height: 100vh;
     min-height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: clamp(16px, 4vw, 40px);
+    padding: 24px;
     position: relative;
     z-index: 1;
 }
@@ -293,102 +215,84 @@ body:not([data-view="chat"]) #layout {
 }
 
 .auth-form-container {
-    position: relative;
-    width: min(432px, 100%);
+    width: min(380px, 100%);
     display: flex;
     flex-direction: column;
-    gap: 22px;
-    padding: 34px 32px 30px;
-    border-radius: var(--r-shell);
+    gap: 24px;
+    padding: 32px;
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-lg);
     background: var(--surface);
-    box-shadow:
-        var(--shadow-lg),
-        inset 0 0 0 1px var(--hairline),
-        inset 0 1px 0 var(--hairline-strong);
-    animation: rise var(--t-slow) var(--ease-out) both;
-}
-
-/* A soft bloom behind the card so it reads as lit rather than pasted onto the
-   background. Negative z-index, so it stays behind the card's own surface. */
-.auth-form-container::before {
-    content: "";
-    position: absolute;
-    inset: -16% -8%;
-    z-index: -1;
-    border-radius: 50%;
-    background: radial-gradient(50% 50% at 50% 40%,
-            color-mix(in srgb, var(--accent), transparent 80%),
-            transparent 70%);
-    pointer-events: none;
+    box-shadow: var(--shadow-pop);
+    animation: rise var(--t-base) var(--ease) both;
 }
 
 .auth-logo {
     display: grid;
     place-items: center;
-    width: 52px;
-    height: 52px;
-    border-radius: 15px;
-    background: linear-gradient(150deg,
-            color-mix(in srgb, var(--accent), transparent 78%),
-            color-mix(in srgb, var(--accent-2), transparent 86%));
-    box-shadow: inset 0 1px 0 var(--hairline-strong);
-    color: var(--accent);
+    width: 36px;
+    height: 36px;
+    border-radius: var(--r-md);
+    border: 1px solid var(--accent-line);
+    background: var(--accent-wash);
+    color: var(--accent-ink);
 }
 
 .auth-logo svg {
-    width: 26px;
-    height: 26px;
+    width: 18px;
+    height: 18px;
 }
 
 .auth-head {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
 }
 
+/* Display type: tight leading and negative tracking, per the reference set. */
 .auth-form-container h2 {
-    font-size: 27px;
-    font-weight: 640;
-    letter-spacing: -0.022em;
-    line-height: 1.15;
+    font-size: 23px;
+    font-weight: 600;
+    letter-spacing: -0.026em;
+    line-height: 1.1;
 }
 
 .auth-form-container .subtitle {
-    font-size: 14px;
+    font-size: 13.5px;
     color: var(--text-dim);
 }
 
 .auth-form-container form {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 14px;
 }
 
 .input-group {
     display: flex;
     flex-direction: column;
-    gap: 7px;
+    gap: 6px;
 }
 
 .auth-form-container .input-group label {
-    font-size: 11.5px;
-    font-weight: 560;
+    font-size: 11px;
+    font-weight: 500;
     color: var(--text-dim);
-    letter-spacing: 0.055em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
 }
 
 .auth-form-container input {
     width: 100%;
-    padding: 13px 15px;
+    padding: 10px 12px;
     border: 1px solid var(--hairline);
-    border-radius: var(--r-md);
-    background: var(--surface-2);
+    border-radius: var(--r-sm);
+    background: var(--bg);
     color: var(--text);
+    font-size: 14px;
     outline: none;
     transition:
         border-color var(--t-fast) var(--ease),
-        background var(--t-fast) var(--ease),
         box-shadow var(--t-fast) var(--ease);
 }
 
@@ -401,9 +305,8 @@ body:not([data-view="chat"]) #layout {
 }
 
 .auth-form-container input:focus {
-    border-color: transparent;
-    background: var(--surface);
-    box-shadow: 0 0 0 1px var(--accent), 0 0 0 3px color-mix(in srgb, var(--accent-ring), transparent 45%);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-wash);
 }
 
 .auth-form-container .password-input-wrapper {
@@ -411,80 +314,66 @@ body:not([data-view="chat"]) #layout {
 }
 
 .auth-form-container .password-input-wrapper input {
-    padding-right: 46px;
+    padding-right: 40px;
 }
 
 .auth-form-container .password-toggle {
     position: absolute;
-    right: 5px;
+    right: 3px;
     top: 50%;
     transform: translateY(-50%);
     display: grid;
     place-items: center;
-    width: 36px;
-    height: 36px;
-    border-radius: var(--r-sm);
+    width: 32px;
+    height: 32px;
+    border-radius: var(--r-xs);
     color: var(--text-faint);
-    transition:
-        color var(--t-fast) var(--ease),
-        background var(--t-fast) var(--ease);
+    transition: color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
 }
 
 .auth-form-container .password-toggle:hover {
     color: var(--text);
-    background: var(--surface-3);
+    background: var(--surface-2);
 }
 
 .auth-form-container .input-hint {
-    font-size: 12px;
+    font-size: 11.5px;
     color: var(--text-faint);
 }
 
-/* Primary action: a pill with a nested trailing icon well. */
 .submit-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    height: 48px;
-    padding: 0 8px 0 22px;
-    border-radius: var(--r-pill);
-    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    height: 38px;
+    border-radius: var(--r-sm);
+    background: var(--accent);
     color: var(--on-accent);
-    font-size: 14.5px;
+    font-size: 13.5px;
     font-weight: 600;
-    letter-spacing: 0.005em;
-    box-shadow:
-        0 1px 0 rgba(255, 255, 255, 0.22) inset,
-        0 10px 24px -10px color-mix(in srgb, var(--accent), transparent 55%);
-    transition:
-        transform var(--t-fast) var(--ease),
-        box-shadow var(--t-base) var(--ease),
-        filter var(--t-fast) var(--ease);
+    letter-spacing: -0.005em;
+    transition: filter var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
 }
 
 .submit-btn:hover:not(:disabled) {
     filter: brightness(1.07);
-    box-shadow:
-        0 1px 0 rgba(255, 255, 255, 0.28) inset,
-        0 16px 32px -12px color-mix(in srgb, var(--accent), transparent 48%);
 }
 
 .submit-btn:active:not(:disabled) {
-    transform: scale(0.985);
+    transform: translateY(1px);
 }
 
 .submit-btn:disabled {
-    opacity: 0.55;
+    opacity: 0.5;
     cursor: not-allowed;
 }
 
 .auth-form-container .divider {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
     color: var(--text-faint);
-    font-size: 12px;
+    font-size: 11px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
 }
@@ -494,23 +383,20 @@ body:not([data-view="chat"]) #layout {
     content: "";
     flex: 1;
     height: 1px;
-    background: linear-gradient(90deg,
-            transparent,
-            var(--hairline-strong),
-            transparent);
+    background: var(--hairline);
 }
 
 .auth-form-container .switch-text {
-    font-size: 13.5px;
+    font-size: 13px;
     color: var(--text-dim);
     text-align: center;
 }
 
 .auth-form-container .switch-text a {
-    color: var(--accent);
+    color: var(--accent-ink);
     text-decoration: none;
-    font-weight: 560;
-    border-bottom: 1px solid transparent;
+    font-weight: 500;
+    border-bottom: 1px solid var(--accent-line);
     transition: border-color var(--t-fast) var(--ease);
 }
 
@@ -518,17 +404,17 @@ body:not([data-view="chat"]) #layout {
     border-bottom-color: currentColor;
 }
 
-/* Inline notices */
 .error-message,
 .success-message {
     display: none;
     align-items: flex-start;
-    gap: 10px;
-    padding: 12px 14px;
-    border-radius: var(--r-md);
-    font-size: 13.5px;
+    gap: 8px;
+    padding: 9px 11px;
+    border-radius: var(--r-sm);
+    border: 1px solid;
+    font-size: 12.5px;
     line-height: 1.45;
-    animation: rise var(--t-base) var(--ease-out) both;
+    animation: rise var(--t-fast) var(--ease) both;
 }
 
 .error-message.visible,
@@ -537,14 +423,14 @@ body:not([data-view="chat"]) #layout {
 }
 
 .error-message {
-    background: color-mix(in srgb, var(--danger), transparent 92%);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--danger), transparent 72%);
+    background: var(--danger-wash);
+    border-color: color-mix(in srgb, var(--danger) 40%, transparent);
     color: var(--danger);
 }
 
 .success-message {
-    background: color-mix(in srgb, var(--success), transparent 92%);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--success), transparent 72%);
+    background: var(--success-wash);
+    border-color: color-mix(in srgb, var(--success) 40%, transparent);
     color: var(--success);
 }
 
@@ -556,47 +442,40 @@ body:not([data-view="chat"]) #layout {
 
 @keyframes shake {
     0%, 100% { transform: translateX(0); }
-    22%, 62% { transform: translateX(-6px); }
-    42%, 82% { transform: translateX(6px); }
+    22%, 62% { transform: translateX(-5px); }
+    42%, 82% { transform: translateX(5px); }
 }
 
 .auth-form-container.shake {
-    animation: shake 380ms var(--ease);
+    animation: shake 340ms var(--ease);
 }
 
 @keyframes rise {
-    from {
-        opacity: 0;
-        transform: translateY(14px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 /* --------------------------------------------------------------------------
-   5. Chat shell
+   4. App frame
    -------------------------------------------------------------------------- */
 
 #layout {
     display: flex;
     position: relative;
     z-index: 1;
-    min-height: 100vh;
-    min-height: 100dvh;
-    padding: clamp(10px, 2.2vmin, 20px);
+    height: 100vh;
+    height: 100dvh;
+    padding: 12px;
 }
 
-/*
-   The shell stretches to the full viewport because #layout is a flex row with
-   the default `align-items: stretch`, and the core has to flex inside it for
-   the message list to get a definite height to scroll within.
-*/
 .app-shell {
     flex: 1;
     min-width: 0;
     display: flex;
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-lg);
+    background: var(--surface);
+    overflow: hidden;
 }
 
 .app-shell > .shell__core {
@@ -619,50 +498,47 @@ body:not([data-view="chat"]) #layout {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    padding: 14px 20px;
+    gap: 12px;
+    height: 48px;
+    padding: 0 12px 0 16px;
     border-bottom: 1px solid var(--hairline);
-    background: color-mix(in srgb, var(--surface-2), transparent 30%);
-    backdrop-filter: blur(12px);
-    position: relative;
-    z-index: var(--z-sticky);
+    flex: none;
 }
 
 .brand {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     min-width: 0;
 }
 
 .brand__mark {
     display: grid;
     place-items: center;
-    width: 34px;
-    height: 34px;
+    width: 26px;
+    height: 26px;
     flex: none;
-    border-radius: 11px;
-    background: linear-gradient(150deg,
-            color-mix(in srgb, var(--accent), transparent 74%),
-            color-mix(in srgb, var(--accent-2), transparent 84%));
-    box-shadow: inset 0 1px 0 var(--hairline-strong);
-    color: var(--accent);
+    border-radius: var(--r-sm);
+    border: 1px solid var(--accent-line);
+    background: var(--accent-wash);
+    color: var(--accent-ink);
 }
 
 .brand__mark svg {
-    width: 18px;
-    height: 18px;
+    width: 14px;
+    height: 14px;
 }
 
 .brand__text {
     display: flex;
-    flex-direction: column;
+    align-items: baseline;
+    gap: 10px;
     min-width: 0;
 }
 
 .brand h1 {
-    font-size: 15px;
-    font-weight: 620;
+    font-size: 13.5px;
+    font-weight: 600;
     letter-spacing: -0.012em;
     white-space: nowrap;
     overflow: hidden;
@@ -670,86 +546,91 @@ body:not([data-view="chat"]) #layout {
 }
 
 .brand__sub {
-    font-size: 11.5px;
+    font-size: 11px;
     color: var(--text-faint);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
 }
 
 .header__actions {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     flex: none;
 }
 
-/* Connection status. Secondary weight, so it does not compete with Logout. */
 .status {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    height: 34px;
-    padding: 0 14px 0 11px;
+    gap: 7px;
+    height: 26px;
+    padding: 0 10px 0 8px;
+    border: 1px solid var(--hairline);
     border-radius: var(--r-pill);
-    background: var(--surface-2);
-    box-shadow: inset 0 0 0 1px var(--hairline);
-    font-size: 12.5px;
-    font-weight: 520;
+    font-size: 11.5px;
+    font-weight: 500;
     color: var(--text-dim);
     white-space: nowrap;
 }
 
 .dot {
-    width: 7px;
-    height: 7px;
+    width: 6px;
+    height: 6px;
     flex: none;
     border-radius: 50%;
     background: var(--text-faint);
-    transition: background var(--t-base) var(--ease);
 }
 
 .dot.connected {
     background: var(--success);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--success), transparent 82%);
 }
 
 .dot.disconnected {
     background: var(--danger);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger), transparent 82%);
-    animation: breathe 1.8s var(--ease) infinite;
+    animation: breathe 1.6s var(--ease) infinite;
 }
 
 @keyframes breathe {
     0%, 100% { opacity: 1; }
-    50% { opacity: 0.35; }
+    50% { opacity: 0.3; }
 }
 
-/* Logout is destructive, not primary. Ghost treatment. */
 #logout {
     display: inline-flex;
     align-items: center;
-    gap: 7px;
-    height: 34px;
-    padding: 0 14px;
-    border-radius: var(--r-pill);
-    background: transparent;
-    box-shadow: inset 0 0 0 1px var(--hairline);
+    gap: 6px;
+    height: 26px;
+    padding: 0 10px;
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-sm);
     color: var(--text-dim);
-    font-size: 12.5px;
-    font-weight: 540;
-    transition:
-        color var(--t-fast) var(--ease),
-        box-shadow var(--t-fast) var(--ease),
-        background var(--t-fast) var(--ease);
+    font-size: 11.5px;
+    font-weight: 500;
+    transition: color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
 }
 
 #logout:hover {
     color: var(--danger);
-    background: color-mix(in srgb, var(--danger), transparent 93%);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--danger), transparent 70%);
+    border-color: color-mix(in srgb, var(--danger) 45%, transparent);
 }
 
 #logout svg {
+    width: 12px;
+    height: 12px;
+}
+
+.sidebar-toggle {
+    display: none;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    flex: none;
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-sm);
+    color: var(--text-dim);
+}
+
+.sidebar-toggle svg {
     width: 14px;
     height: 14px;
 }
@@ -760,7 +641,11 @@ body:not([data-view="chat"]) #layout {
     flex: 1;
     min-height: 0;
     display: grid;
-    grid-template-columns: 264px minmax(0, 1fr);
+    grid-template-columns: 232px minmax(0, 1fr);
+}
+
+.scrim {
+    display: none;
 }
 
 /* -- Sidebar --------------------------------------------------------------- */
@@ -768,18 +653,18 @@ body:not([data-view="chat"]) #layout {
 #username {
     display: flex;
     flex-direction: column;
-    gap: 18px;
-    padding: 20px 16px;
+    gap: 16px;
+    padding: 14px 12px;
     border-right: 1px solid var(--hairline);
-    background: var(--surface-2);
+    background: var(--surface);
     overflow-y: auto;
     min-height: 0;
 }
 
 .side-label {
-    font-size: 10.5px;
+    font-size: 10px;
     font-weight: 600;
-    letter-spacing: 0.13em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--text-faint);
 }
@@ -787,11 +672,11 @@ body:not([data-view="chat"]) #layout {
 .identity {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px;
-    border-radius: var(--r-lg);
-    background: var(--surface);
-    box-shadow: inset 0 0 0 1px var(--hairline);
+    gap: 9px;
+    padding: 8px;
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-md);
+    background: var(--bg);
 }
 
 .identity__text {
@@ -799,7 +684,7 @@ body:not([data-view="chat"]) #layout {
 }
 
 #currentUser {
-    font-size: 14.5px;
+    font-size: 13px;
     font-weight: 600;
     letter-spacing: -0.008em;
     white-space: nowrap;
@@ -808,14 +693,14 @@ body:not([data-view="chat"]) #layout {
 }
 
 .identity__role {
-    font-size: 11.5px;
+    font-size: 11px;
     color: var(--text-faint);
 }
 
 .presence {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 6px;
     min-height: 0;
 }
 
@@ -827,7 +712,7 @@ body:not([data-view="chat"]) #layout {
 }
 
 .presence__count {
-    font-size: 11px;
+    font-size: 10.5px;
     font-weight: 600;
     color: var(--text-faint);
     font-variant-numeric: tabular-nums;
@@ -836,7 +721,7 @@ body:not([data-view="chat"]) #layout {
 #userList {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 1px;
     overflow-y: auto;
     min-height: 0;
 }
@@ -844,14 +729,12 @@ body:not([data-view="chat"]) #layout {
 #userList li {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 7px 10px;
-    border-radius: var(--r-md);
-    font-size: 13.5px;
+    gap: 8px;
+    padding: 5px 8px;
+    border-radius: var(--r-xs);
+    font-size: 12.5px;
     color: var(--text-dim);
-    transition:
-        background var(--t-fast) var(--ease),
-        color var(--t-fast) var(--ease);
+    transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
 }
 
 #userList li:hover {
@@ -860,23 +743,21 @@ body:not([data-view="chat"]) #layout {
 }
 
 #userList li .user-dot {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
     flex: none;
     border-radius: 50%;
     background: var(--success);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--success), transparent 84%);
 }
 
 #userList li.me {
-    background: var(--accent-soft);
-    color: var(--text);
-    font-weight: 580;
+    background: var(--accent-wash);
+    color: var(--accent-ink);
+    font-weight: 500;
 }
 
 #userList li.me .user-dot {
     background: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-ring);
 }
 
 #userList li .u-name {
@@ -899,7 +780,6 @@ body:not([data-view="chat"]) #layout {
     flex-direction: column;
     min-height: 0;
     flex: 1;
-    padding: 0;
 }
 
 #messages-container > span {
@@ -911,16 +791,16 @@ body:not([data-view="chat"]) #layout {
     min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: 22px clamp(14px, 3vw, 28px);
+    padding: 20px 24px;
     scrollbar-width: thin;
     scrollbar-color: var(--surface-3) transparent;
 }
 
 #messages::-webkit-scrollbar {
-    width: 10px;
+    width: 9px;
 }
 
 #messages::-webkit-scrollbar-thumb {
@@ -934,220 +814,211 @@ body:not([data-view="chat"]) #layout {
     background: transparent;
 }
 
-/* A message is a row: avatar, then a column of meta + bubble. */
 #messages > .msg {
     display: flex;
-    align-items: flex-end;
-    gap: 9px;
-    max-width: min(76%, 58ch);
-    margin: 10px 0 0;
-    animation: bubble var(--t-base) var(--ease-out) both;
-}
-
-@keyframes bubble {
-    from {
-        opacity: 0;
-        transform: translateY(8px) scale(0.985);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
+    align-items: flex-start;
+    gap: 8px;
+    max-width: min(72%, 56ch);
+    margin: 12px 0 0;
+    animation: bubble var(--t-base) var(--ease) both;
 }
 
 #messages > .msg:first-of-type {
     margin-top: 0;
 }
 
+@keyframes bubble {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 .avatar {
     display: grid;
     place-items: center;
     flex: none;
-    width: 28px;
-    height: 28px;
-    border-radius: 9px;
-    font-size: 10.5px;
+    width: 22px;
+    height: 22px;
+    margin-top: 15px;
+    border-radius: var(--r-xs);
+    font-size: 9.5px;
     font-weight: 700;
-    letter-spacing: 0.03em;
-    color: #fff;  /* saturated hsl fill: white is the only legible ink */
-    background: linear-gradient(150deg,
-            hsl(var(--hue, 250) 62% 58%),
-            hsl(var(--hue, 250) 58% 46%));
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.26);
+    letter-spacing: 0.02em;
+    color: var(--on-accent);
+    /* Hue varies per person so they stay recognisable, but chroma is held low
+       so the set harmonises with the single-accent palette instead of
+       fighting it. */
+    background: hsl(var(--hue, 45) 26% 46%);
     user-select: none;
 }
 
 .avatar--lg {
-    width: 34px;
-    height: 34px;
-    border-radius: 11px;
-    font-size: 12px;
+    width: 28px;
+    height: 28px;
+    margin-top: 0;
+    font-size: 11px;
 }
 
 .msg__body {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
     min-width: 0;
 }
 
 .msg__meta {
-    font-size: 11.5px;
-    font-weight: 560;
+    font-size: 11px;
+    font-weight: 500;
     color: var(--text-faint);
-    letter-spacing: 0.012em;
     font-variant-numeric: tabular-nums;
-    padding: 0 3px;
+    padding: 0 2px;
 }
 
 .bubble {
-    padding: 10px 14px;
-    border-radius: var(--r-lg);
-    border-bottom-left-radius: var(--r-sm);
+    padding: 8px 12px;
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-md);
     background: var(--surface-2);
     color: var(--text);
-    font-size: 14.5px;
-    line-height: 1.55;
+    font-size: 14px;
+    line-height: 1.5;
     overflow-wrap: anywhere;
-    box-shadow: inset 0 0 0 1px var(--hairline);
 }
 
 #messages > .msg.my-message {
     flex-direction: row-reverse;
     align-self: flex-end;
-    align-items: flex-end;
 }
 
 #messages > .msg.my-message .msg__body {
     align-items: flex-end;
 }
 
-/* Your own messages carry no avatar. Showing one on the right (via row-reverse)
-   is unconventional, and it pushed the bubble off the true right edge. */
 #messages > .msg.my-message .avatar {
     display: none;
 }
 
 #messages > .msg.my-message .msg__meta {
-    /* The meta line sits ABOVE the bubble, on the page background -- not on the
-       accent fill. So it uses the page's own meta colour. Using --on-accent here
-       rendered it near-black on the dark surface and effectively invisible. */
-    color: var(--text-faint);
+    color: var(--accent-ink);
 }
 
 #messages > .msg.my-message .bubble {
-    background: linear-gradient(150deg, var(--accent), var(--accent-2));
-    color: var(--on-accent);
-    border-bottom-left-radius: var(--r-lg);
-    border-bottom-right-radius: var(--r-sm);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.20),
-        0 10px 24px -16px color-mix(in srgb, var(--accent), transparent 40%);
+    /* Neutral elevation, not a gold wash: tinting near-black with the accent
+       produces an olive cast. Position and surface step already separate own
+       messages from others; the accent stays on the meta line. */
+    background: var(--surface-3);
+    border-color: var(--hairline-strong);
+    color: var(--text);
 }
 
-/* Grouped runs read as one block instead of a stack of separate bubbles. */
+/* Grouped runs read as one block rather than a stack of separate bubbles. */
 #messages > .msg.is-grouped {
     margin-top: 2px;
 }
 
-#messages > .msg.is-grouped .avatar,
+#messages > .msg.is-grouped .avatar {
+    visibility: hidden;
+}
+
 #messages > .msg.is-grouped .msg__meta {
     visibility: hidden;
     height: 0;
-    margin: 0;
-}
-
-#messages > .msg.is-grouped .bubble {
-    border-top-left-radius: var(--r-sm);
-}
-
-#messages > .msg.my-message.is-grouped .bubble {
-    border-top-left-radius: var(--r-lg);
-    border-top-right-radius: var(--r-sm);
+    overflow: hidden;
 }
 
 #messages > .announcement {
     align-self: center;
     max-width: 100%;
-    margin: 15px 0;
-    padding: 5px 14px;
+    margin: 14px 0;
+    padding: 3px 11px;
+    border: 1px solid var(--hairline);
     border-radius: var(--r-pill);
-    background: transparent;
-    box-shadow: inset 0 0 0 1px var(--hairline);
+    background: var(--surface-2);
     color: var(--text-faint);
-    font-size: 12px;
-    font-style: normal;
-    letter-spacing: 0.012em;
+    font-size: 11.5px;
     text-align: center;
-    animation: bubble var(--t-base) var(--ease-out) both;
+    animation: bubble var(--t-base) var(--ease) both;
 }
 
-/* Empty state — never a blank void. */
 .empty {
     margin: auto;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
-    padding: 32px 20px;
+    gap: 8px;
+    padding: 28px 20px;
     text-align: center;
     color: var(--text-faint);
-    animation: rise var(--t-slow) var(--ease-out) both;
+    animation: rise var(--t-base) var(--ease) both;
 }
 
 .empty__mark {
     display: grid;
     place-items: center;
-    width: 46px;
-    height: 46px;
-    border-radius: 15px;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-md);
     background: var(--surface-2);
-    box-shadow: inset 0 0 0 1px var(--hairline);
     color: var(--text-faint);
 }
 
 .empty__mark svg {
-    width: 21px;
-    height: 21px;
+    width: 15px;
+    height: 15px;
 }
 
 .empty__title {
-    font-size: 14.5px;
-    font-weight: 580;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.008em;
     color: var(--text-dim);
 }
 
 .empty__hint {
-    font-size: 13px;
-    max-width: 34ch;
+    font-size: 12.5px;
+    max-width: 32ch;
 }
 
 /* -- Composer -------------------------------------------------------------- */
 
 .composer-wrap {
-    padding: 12px clamp(14px, 3vw, 28px) clamp(14px, 2.4vw, 20px);
+    flex: none;
+    padding: 10px 24px 14px;
     border-top: 1px solid var(--hairline);
-    background: color-mix(in srgb, var(--surface-2), transparent 30%);
+}
+
+.composer-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0 2px 6px 12px;
+}
+
+.composer-head label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-faint);
 }
 
 #chat-form {
     display: flex;
     align-items: flex-end;
-    gap: 10px;
-    width: 100%;
-    padding: 6px 6px 6px 18px;
-    border-radius: var(--r-pill);
-    background: var(--surface);
-    box-shadow: inset 0 0 0 1px var(--hairline);
-    transition:
-        box-shadow var(--t-base) var(--ease),
-        opacity var(--t-base) var(--ease);
+    gap: 8px;
+    padding: 5px 5px 5px 12px;
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-md);
+    background: var(--bg);
+    transition: border-color var(--t-fast) var(--ease),
+        box-shadow var(--t-fast) var(--ease),
+        opacity var(--t-fast) var(--ease);
 }
 
 #chat-form:focus-within {
-    box-shadow:
-        inset 0 0 0 1px var(--accent),
-        0 0 0 3px color-mix(in srgb, var(--accent-ring), transparent 45%);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-wash);
 }
 
 #chat-form.is-offline {
@@ -1155,39 +1026,27 @@ body:not([data-view="chat"]) #layout {
     pointer-events: none;
 }
 
-/* A visible label, not a placeholder standing in for one.
-   The ui-ux-pro-max UX rules rate "placeholder as only label" High severity:
-   the hint disappears on first keystroke, so the field loses its name exactly
-   when the user is typing into it. */
-.composer-head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 0 6px 7px 18px;
-}
-
-.composer-head label {
-    font-size: 11.5px;
-    font-weight: 560;
-    color: var(--text-dim);
-    letter-spacing: 0.055em;
-    text-transform: uppercase;
+#chat-form label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
 }
 
 #message-box {
     flex: 1;
     min-width: 0;
-    padding: 9px 0;
+    padding: 6px 0;
     border: none;
     background: transparent;
     color: var(--text);
-    font-size: 14.5px;
+    font-size: 14px;
     line-height: 1.5;
     outline: none;
     resize: none;
     max-height: 132px;
-    field-sizing: content;
 }
 
 #message-box::placeholder {
@@ -1196,7 +1055,9 @@ body:not([data-view="chat"]) #layout {
 
 .counter {
     flex: none;
-    font-size: 11px;
+    align-self: center;
+    padding: 0 4px;
+    font-size: 10.5px;
     font-variant-numeric: tabular-nums;
     color: var(--text-faint);
     transition: color var(--t-fast) var(--ease);
@@ -1215,73 +1076,36 @@ body:not([data-view="chat"]) #layout {
     display: grid;
     place-items: center;
     flex: none;
-    width: 38px;
-    height: 38px;
-    border-radius: var(--r-pill);
-    background: linear-gradient(145deg, var(--accent), var(--accent-2));
+    width: 30px;
+    height: 30px;
+    border-radius: var(--r-sm);
+    background: var(--accent);
     color: var(--on-accent);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.24),
-        0 8px 18px -10px color-mix(in srgb, var(--accent), transparent 45%);
-    transition:
-        transform var(--t-fast) var(--ease),
-        filter var(--t-fast) var(--ease),
+    transition: filter var(--t-fast) var(--ease), transform var(--t-fast) var(--ease),
         opacity var(--t-fast) var(--ease);
 }
 
 #send svg {
-    width: 17px;
-    height: 17px;
-    margin-left: 1px;
+    width: 14px;
+    height: 14px;
 }
 
 #send:hover:not(:disabled) {
-    filter: brightness(1.08);
+    filter: brightness(1.07);
 }
 
 #send:active:not(:disabled) {
-    transform: scale(0.93);
+    transform: translateY(1px);
 }
 
 #send:disabled {
     opacity: 0.4;
     cursor: not-allowed;
-    box-shadow: none;
 }
 
 /* --------------------------------------------------------------------------
-   6. Responsive
-
-   The sidebar is not a second column on a narrow screen: it becomes a
-   collapsible drawer toggled from the top bar, so the message list keeps the
-   full width where it matters.
+   5. Responsive
    -------------------------------------------------------------------------- */
-
-.sidebar-toggle {
-    display: none;
-    place-items: center;
-    width: 34px;
-    height: 34px;
-    flex: none;
-    border-radius: 11px;
-    background: var(--surface-2);
-    box-shadow: inset 0 0 0 1px var(--hairline);
-    color: var(--text-dim);
-    transition: color var(--t-fast) var(--ease);
-}
-
-.sidebar-toggle:hover {
-    color: var(--text);
-}
-
-.sidebar-toggle svg {
-    width: 17px;
-    height: 17px;
-}
-
-.scrim {
-    display: none;
-}
 
 @media (max-width: 860px) {
     #inner-layout {
@@ -1292,17 +1116,22 @@ body:not([data-view="chat"]) #layout {
         display: grid;
     }
 
+    .brand__sub {
+        display: none;
+    }
+
     #username {
         position: fixed;
-        top: 0;
-        bottom: 0;
-        left: 0;
-        width: min(84vw, 300px);
+        top: 12px;
+        bottom: 12px;
+        left: 12px;
+        width: min(78vw, 260px);
         z-index: 3;
-        background: var(--surface);
-        transform: translateX(-102%);
+        border: 1px solid var(--hairline);
+        border-radius: var(--r-lg);
+        box-shadow: var(--shadow-pop);
+        transform: translateX(calc(-100% - 16px));
         transition: transform var(--t-base) var(--ease);
-        box-shadow: var(--shadow-lg);
     }
 
     #inner-layout[data-drawer="open"] #username {
@@ -1314,33 +1143,26 @@ body:not([data-view="chat"]) #layout {
         position: fixed;
         inset: 0;
         z-index: 2;
-        background: rgba(3, 4, 8, 0.55);
-        backdrop-filter: blur(2px);
-        animation: fade var(--t-base) var(--ease) both;
+        background: rgba(0, 0, 0, 0.6);
     }
 
     #messages > .msg {
         max-width: 86%;
     }
-
-    .brand__sub {
-        display: none;
-    }
-}
-
-@keyframes fade {
-    from { opacity: 0; }
-    to { opacity: 1; }
 }
 
 @media (max-width: 520px) {
-    .header {
-        padding: 11px 13px;
-        gap: 10px;
+    #layout {
+        padding: 0;
     }
 
-    .brand h1 {
-        font-size: 14px;
+    .app-shell {
+        border-radius: 0;
+        border: none;
+    }
+
+    .header {
+        padding: 0 10px 0 12px;
     }
 
     .status span:not(.dot) {
@@ -1348,7 +1170,7 @@ body:not([data-view="chat"]) #layout {
     }
 
     .status {
-        padding: 0 11px;
+        padding: 0 8px;
     }
 
     #logout span {
@@ -1356,7 +1178,15 @@ body:not([data-view="chat"]) #layout {
     }
 
     #logout {
-        padding: 0 10px;
+        padding: 0 8px;
+    }
+
+    #messages {
+        padding: 16px 14px;
+    }
+
+    .composer-wrap {
+        padding: 10px 14px 12px;
     }
 
     #messages > .msg {
@@ -1365,12 +1195,7 @@ body:not([data-view="chat"]) #layout {
 }
 
 /* --------------------------------------------------------------------------
-   7. Motion preferences
-
-   Every animation above collapses to an instant state change. The connected
-   pulse and the shake are the two that matter most here: one is a looping
-   animation that can trigger vestibular symptoms, the other is a full-body
-   horizontal shake.
+   6. Motion preferences
    -------------------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
@@ -1383,15 +1208,8 @@ body:not([data-view="chat"]) #layout {
         scroll-behavior: auto !important;
     }
 
-    .dot.disconnected {
-        animation: none;
-    }
-
+    .dot.disconnected,
     .auth-form-container.shake {
         animation: none;
-    }
-
-    #messages {
-        scroll-behavior: auto;
     }
 }

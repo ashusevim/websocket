@@ -44,10 +44,13 @@ ticket before connecting. See [WebSocket authentication](#websocket-authenticati
 
 ### Client
 
-- **Design system generated, then measured.** Colours, type scale and motion
-  tokens come from the [ui-ux-pro-max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)
-  engine (pattern *Real-Time / Operations*, style *Soft UI Evolution*), then
-  every colour pair is checked against WCAG by a script in CI.
+- **Design direction taken from real production apps.** The palette, type
+  treatment and radii are derived from sites in the
+  [inspo](https://github.com/Nutlope/inspo) archive — Linear as the archetype,
+  corroborated by Bun, Algolia, Superlist, CodePen and Apple Developer, which
+  independently agree on a near-black base, one contrasting accent, tight radii
+  and high-contrast monochrome type. Every colour pair is then checked against
+  WCAG by a script that runs in CI.
 - **Dark and light, both first-class.** Two complete token sets, not one plus
   inverted greys.
 - **Chat-native layout.** The page never scrolls; only the message list does.
