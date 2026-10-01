@@ -38,10 +38,33 @@ ticket before connecting. See [WebSocket authentication](#websocket-authenticati
 - **Tests**: 63 unit and integration tests, no mocking of the database or the
   HTTP/WS stack
 - **Monitoring**: Winston (JSON in production), Sentry error tracking
-- **Modern UI**: responsive dark/light theme, connection status, user list
 - **Graceful Shutdown**: closes sockets, flushes Sentry, then drains the pool
 - **Production Ready**: multi-stage Docker image (non-root), health check,
   idempotent schema, Render deploy config
+
+### Client
+
+- **Design direction taken from real production apps.** The palette, type
+  treatment and radii are derived from sites in the
+  [inspo](https://github.com/Nutlope/inspo) archive — Linear as the archetype,
+  corroborated by Bun, Algolia, Superlist, CodePen and Apple Developer, which
+  independently agree on a near-black base, one contrasting accent, tight radii
+  and high-contrast monochrome type. Every colour pair is then checked against
+  WCAG by a script that runs in CI.
+- **Dark, light, or system — with a toggle.** Three-state cycle on every screen,
+  including before sign-in. Two complete token sets rather than one plus
+  inverted greys. The choice persists, is applied before first paint so there is
+  no flash of the wrong theme, and an explicit choice is never overwritten by a
+  later system change. On `system` the toggle shows a monitor icon while
+  rendering whatever the OS asks for.
+- **Chat-native layout.** The page never scrolls; only the message list does.
+  The composer is pinned to the bottom and grows with its content.
+- **Live presence.** Connection state, room member count, per-user status
+  dots, and join/leave announcements.
+- **Accessible by construction**: semantic landmarks, a visible label on every
+  input (never a placeholder standing in for one), `aria-live` on the log and
+  status, keyboard-operable drawer, and `prefers-reduced-motion` honoured.
+- **Responsive down to 375px**, with the member list becoming a drawer.
 
 ## Quick Start
 
@@ -696,11 +719,27 @@ Two things to know about the free plan:
   connection rather than serving 500s, so a cold start either succeeds or
   crash-loops visibly in the logs.
 
-To point a deployed client at a different API host without rebuilding:
+### Pointing the client at the API
+
+Once the client and the API are on different hosts, tell the client where the
+API is by editing one line in `client/config.js`:
+
+```js
+window.SERVER_HOST = 'api.ashusevim.dev';   // no scheme, no trailing slash
+```
+
+Leave it empty for local development, where both run on localhost. The file
+exists so retargeting the client is a one-line change with no code edit and no
+rebuild of anything else.
+
+There is also a query override, useful for testing a deploy before committing to
+a hostname:
 
 ```
-https://your-client.onrender.com/?server=api.example.com
+https://chat.ashusevim.dev/?server=websocket-chat-server-ptfw.onrender.com
 ```
+
+The query wins over `config.js`.
 
 ### Schema management
 

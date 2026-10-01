@@ -45,6 +45,12 @@ jobs:
         working-directory: server
         run: npm run typecheck
 
+      # The client's colour tokens are generated, then corrected against
+      # measured contrast. This recomputes every pair so a colour edit cannot
+      # quietly drop body text below 4.5:1 or a focus ring below 3:1.
+      - name: Client contrast check
+        run: node client/scripts/check-contrast.mjs
+
       # The integration suite needs a real Postgres: the 409 path depends on a
       # unique constraint and logout revocation depends on a row delete, so a
       # mock would not exercise either. GitHub runners have Docker, so the same
