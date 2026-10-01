@@ -9,8 +9,10 @@ import { fileURLToPath } from "node:url";
 // is the same wiring the browser gets from <script src="api.js">.
 await import("../api.js");
 
-const { readJSON } = globalThis.ChatAPI ?? {};
+const { readJSON, resolveServerHost, describeFailure } = globalThis.ChatAPI ?? {};
 const CLIENT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+const ORIGIN = "https://socketchatapi.ashusevim.dev";
 
 test("api.js exposes readJSON before anything uses it", () => {
     assert.equal(typeof readJSON, "function", "globalThis.ChatAPI.readJSON is missing");
@@ -90,4 +92,148 @@ test("api.js is loaded before the main script", async () => {
     const mainAt = html.indexOf('<script>\n');
     assert.notEqual(apiAt, -1, "api.js is not referenced from index.html");
     assert.ok(apiAt < mainAt, "api.js must precede the inline script that reads ChatAPI");
+});
+
+/*
+ * describeFailure exists because the client and the API live on different
+ * hosts, and the first thing that breaks is DNS that has not propagated yet.
+ * fetch rejects that with a bare "Failed to fetch", which is unreadable as a
+ * login error and indistinguishable from a laptop with no wifi — whereas the
+ * real fix is one line in a file the user has never opened.
+ */
+test("exposes describeFailure", () => {
+    assert.equal(typeof describeFailure, "function", "globalThis.ChatAPI.describeFailure is missing");
+});
+
+// The three engines' actual wording for a fetch that never reached a server.
+for (const wording of [
+    "Failed to fetch", // Chrome, Edge
+    "NetworkError when attempting to fetch resource.", // Firefox
+    "A network error occurred.", // Safari, older Firefox
+    "Load failed", // Safari
+]) {
+    test(`a fetch rejection (${JSON.stringify(wording)}) names the origin and the config file`, () => {
+        const message = describeFailure(new TypeError(wording), ORIGIN);
+        assert.equal(message.includes(wording), false, "raw browser wording leaked through");
+        assert.ok(message.includes(ORIGIN), `expected the origin, got: ${message}`);
+        assert.ok(message.includes("window.SERVER_HOST"), `expected the config pointer, got: ${message}`);
+        assert.ok(message.includes("client/config.js"), `expected the file, got: ${message}`);
+    });
+}
+
+test("a non-network TypeError is NOT reported as a connection failure", () => {
+    // Our own code can throw TypeErrors (bad new URL / new WebSocket input).
+    // Reporting those as "check SERVER_HOST" would be wrong and would hide the
+    // real bug behind a config hint.
+    const message = describeFailure(new TypeError("invalid URL"), ORIGIN);
+    assert.equal(message, "invalid URL");
+});
+
+test("a server-side message passes through unchanged", () => {
+    // Bad credentials must keep saying bad credentials.
+    assert.equal(
+        describeFailure(new Error("Invalid username or password"), ORIGIN),
+        "Invalid username or password",
+    );
+});
+
+test("an error with no message falls back to the connection wording", () => {
+    const message = describeFailure(new Error(""), ORIGIN);
+    assert.match(message, /Cannot reach the server/);
+});
+
+test("a thrown non-Error falls back rather than crashing", () => {
+    assert.match(describeFailure("boom", ORIGIN), /Cannot reach the server/);
+    assert.match(describeFailure(undefined, ORIGIN), /Cannot reach the server/);
+});
+
+/*
+ * The gate. Both entry-point catches must route through the helper; if one
+ * drifts back to `error.message`, the browser's "Failed to fetch" comes back
+ * on exactly the path a first-time deploy uses, and no unit test fails.
+ */
+test("both auth entry points report failures through describeFailure", async () => {
+    const html = await readFile(path.join(CLIENT_DIR, "index.html"), "utf8");
+    const uses = html.match(/ChatAPI\.describeFailure/g) ?? [];
+    assert.equal(uses.length, 2, `expected 2 describeFailure uses, found ${uses.length}`);
+
+    const loginCatch = html.slice(html.indexOf("async function Login"), html.indexOf("async function Logout"));
+    assert.ok(
+        loginCatch.includes("ChatAPI.describeFailure"),
+        "Login's catch no longer routes through describeFailure",
+    );
+});
+
+/*
+ * Host resolution. config.js holds the deployed API's hostname because a
+ * static site has no build step and therefore no environment variable — which
+ * makes it the wrong thing to honour on a localhost page. The regression this
+ * guards: with SERVER_HOST set to the production API, a local session started
+ * sending its traffic to production (and to an origin ALLOWED_ORIGINS refuses)
+ * instead of to localhost:8080.
+ */
+const PROD_PAGE = { isProduction: true, pageHost: "chat.ashusevim.dev" };
+const LOCAL_PAGE = { isProduction: false, pageHost: "localhost:5500" };
+const CONFIGURED = "socketchatapi.ashusevim.dev";
+
+test("exposes resolveServerHost", () => {
+    assert.equal(typeof resolveServerHost, "function", "globalThis.ChatAPI.resolveServerHost is missing");
+});
+
+test("a deployed page uses the configured API host", () => {
+    assert.equal(
+        resolveServerHost({ ...PROD_PAGE, configured: CONFIGURED, query: null }),
+        CONFIGURED,
+    );
+});
+
+test("a deployed page with no configured host falls back to same origin", () => {
+    assert.equal(resolveServerHost({ ...PROD_PAGE, configured: "", query: null }), "chat.ashusevim.dev");
+});
+
+test("a non-string configured value is ignored rather than stringified", () => {
+    assert.equal(resolveServerHost({ ...PROD_PAGE, configured: undefined, query: null }), "chat.ashusevim.dev");
+});
+
+test("a localhost page ignores the configured production host", () => {
+    // The regression this file exists to prevent.
+    assert.equal(resolveServerHost({ ...LOCAL_PAGE, configured: CONFIGURED, query: null }), "localhost:8080");
+});
+
+test("a localhost page defaults to the local API when nothing is configured", () => {
+    assert.equal(resolveServerHost({ ...LOCAL_PAGE, configured: "", query: null }), "localhost:8080");
+});
+
+test("?server= wins everywhere, including over a configured host", () => {
+    assert.equal(
+        resolveServerHost({ ...PROD_PAGE, configured: CONFIGURED, query: "api.staging.example.com" }),
+        "api.staging.example.com",
+    );
+    assert.equal(
+        resolveServerHost({ ...LOCAL_PAGE, configured: CONFIGURED, query: "localhost:8081" }),
+        "localhost:8081",
+    );
+});
+
+test("a local host can still be chosen via ?server=", () => {
+    // The escape hatch the localhost rule gives up: pointing a local page at a
+    // remote API still works, it just has to be deliberate.
+    assert.equal(
+        resolveServerHost({ ...LOCAL_PAGE, configured: "", query: CONFIGURED }),
+        CONFIGURED,
+    );
+});
+
+test("index.html resolves the host through the helper, not inline", async () => {
+    const html = await readFile(path.join(CLIENT_DIR, "index.html"), "utf8");
+    assert.equal(
+        (html.match(/ChatAPI\.resolveServerHost/g) ?? []).length,
+        1,
+        "expected exactly one ChatAPI.resolveServerHost call",
+    );
+    assert.equal(
+        html.includes("function resolveServerHost"),
+        false,
+        "index.html re-inlined host resolution; it lives in api.js so it can be tested",
+    );
 });
