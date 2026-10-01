@@ -11,7 +11,7 @@
     "check:contrast": "node client/scripts/check-contrast.mjs",
     "check:render": "node scripts/check-render-yaml.mjs",
     "check": "npm run check:contrast && npm run check:render",
-    "test:client": "node --test client/test/"
+    "test:client": "node --test \"client/test/**/*.test.mjs\""
   },
   "devDependencies": {
     "ajv": "^8.17.1",
