@@ -29,6 +29,11 @@ RUN npm ci --omit=dev
 # Copy built files from builder stage
 COPY --from=builder /app/dist ./dist
 
+# The schema is applied at boot (see src/db.ts). It must be in the final image,
+# or a fresh managed database leaves the server with no tables and every write
+# fails with a 500.
+COPY schema.sql ./schema.sql
+
 # Documentation only: the server reads PORT from the environment and defaults
 # to 8080. Render sets PORT=10000 and routes traffic to whatever this listens
 # on, so this value is not load-bearing.

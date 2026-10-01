@@ -20,6 +20,7 @@ ticket before connecting. See [WebSocket authentication](#websocket-authenticati
 - [Security](#security)
 - [Technical Deep Dive](#technical-deep-dive)
 - [Deployment](#deployment)
+  - [Schema management](#schema-management)
 - [Testing](#testing)
 - [Troubleshooting](#troubleshooting)
 
@@ -664,34 +665,56 @@ volumes:
 docker-compose up -d
 ```
 
-### Render.yaml (Production)
+### Render (production)
 
-```yaml
-services:
-  - type: web
-    name: websocket-chat-server
-    env: docker
-    dockerfilePath: ./server/Dockerfile
-    healthCheckPath: /health
-    envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: websocket-chat-db
-          property: connectionString
-      - key: JWT_SECRET
-        generateValue: true
-      - key: NODE_ENV
-        value: production
+`render.yaml` at the repo root is a Render Blueprint. It creates three
+resources: the API/WebSocket service, the static client, and a Postgres
+database.
 
-  - type: web
-    name: websocket-chat-client
-    env: static
-    staticPublishPath: ./client
+**Deploy:**
 
-databases:
-  - name: websocket-chat-db
-    plan: free
+1. Push the branch.
+2. In Render: **New +** → **Blueprint** → connect the repo → apply.
+3. Set `ALLOWED_ORIGINS` on the server to the client's URL, e.g.
+   `https://websocket-chat-client.onrender.com`. Render marks it
+   `sync: false`, so it will prompt you. **A wrong value here shows up as a 403
+   on connect, not a CORS error** — the WebSocket handshake checks the same
+   list.
+4. Deploy the client, then open its URL.
+
+No manual migration step is needed. The server applies `schema.sql` at boot
+(see [Schema management](#schema-management)), and the file ships inside the
+image.
+
+Two things to know about the free plan:
+
+- **Instances sleep after ~15 minutes idle** and are restarted roughly monthly.
+  The first request after a sleep takes 30–60 seconds while the instance wakes.
+  The client's exponential-backoff reconnect handles the WebSocket side.
+- **The database sleeps too** and can be unavailable for a minute after a long
+  idle period. The server now refuses to start without a working database
+  connection rather than serving 500s, so a cold start either succeeds or
+  crash-loops visibly in the logs.
+
+To point a deployed client at a different API host without rebuilding:
+
 ```
+https://your-client.onrender.com/?server=api.example.com
+```
+
+### Schema management
+
+`server/schema.sql` is idempotent and is applied on every boot:
+
+- `CREATE TABLE IF NOT EXISTS` / `CREATE INDEX IF NOT EXISTS`, so re-running is
+  a no-op and concurrent starts are safe.
+- The unique index `active_tokens_username_key` is **load-bearing** — the login
+  upsert matches on it. Without it, logging in twice fails.
+- Set `AUTO_MIGRATE=false` to manage the schema by hand instead.
+
+This is deliberately not a migration framework. There is one schema file and no
+versioned history yet; `node-pg-migrate` or Prisma becomes worth it at the
+first change that must not re-run.
 
 ### Dockerfile
 
@@ -724,9 +747,14 @@ RUN npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
 
+# The schema is applied at boot (see src/db.ts). It must be in the final image,
+# or a fresh managed database leaves the server with no tables and every write
+# fails with a 500.
+COPY schema.sql ./schema.sql
+
 # Documentation only: the server reads PORT from the environment and defaults
-# to 8080. Render sets PORT=10000 and routes traffic to whatever this listens
-# on, so this value is not load-bearing.
+# to 8080. Render injects PORT and routes traffic to whatever this listens on,
+# so this value is not load-bearing.
 EXPOSE 8080
 
 USER node
@@ -734,12 +762,13 @@ USER node
 CMD ["node", "dist/src/index.js"]
 ```
 
-Two details worth knowing:
+Three details worth knowing:
 
 - The entrypoint is `dist/src/index.js`, not `dist/index.js`, because
   `tsconfig.json` sets `rootDir: "."` so that `test/` compiles alongside `src/`.
-- `test/` is copied into the build stage for that reason. The tests are not
-  shipped in the final image; they are only needed for the type-check.
+- `test/` is copied into the **build** stage for the type-check, but is not in
+  the final image.
+- `schema.sql` must be in the final image for the boot-time migration.
 
 ### Scaling Strategy
 

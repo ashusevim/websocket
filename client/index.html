@@ -301,7 +301,42 @@
         const isProduction = !LOCAL_HOSTS.includes(window.location.hostname);
         const wsProtocol = isProduction ? 'wss' : 'ws';
         const apiProtocol = isProduction ? 'https' : 'http';
-        const serverHost = isProduction ? 'websocket-chat-server-ptfw.onrender.com' : 'localhost:8080';
+
+        /**
+         * Where the API and WebSocket server live.
+         *
+         * Resolution order:
+         *   1. `?server=` query parameter — lets you point a deployed client at
+         *      a different API without a rebuild.
+         *   2. `window.SERVER_HOST` — set this in the static host's config.
+         *   3. Same origin as the page.
+         *
+         * A hardcoded hostname meant every rename or redeploy broke the client.
+         * The old value only worked because a previous deploy's URL had been
+         * edited into the source. Same-origin is the default because it is
+         * right by construction; override it only when the API is a different
+         * host — and add that origin to the server's ALLOWED_ORIGINS, or the
+         * handshake is refused with 403.
+         */
+        function resolveServerHost() {
+            const fromQuery = new URLSearchParams(window.location.search).get('server');
+            if (fromQuery) return fromQuery;
+
+            if (typeof window.SERVER_HOST === 'string' && window.SERVER_HOST) {
+                return window.SERVER_HOST;
+            }
+
+            // Local dev serves the client on :5500 and the API on :8080, so
+            // same-origin is wrong there. In production the client and API are
+            // separate Render services, and same-origin is only correct if they
+            // are fronted together — so require the explicit override unless
+            // the page is served from the API host itself.
+            if (!isProduction) return 'localhost:8080';
+
+            return window.location.host;
+        }
+
+        const serverHost = resolveServerHost();
         let username = "";
         let token = "";
         let shouldReconnect = true;
