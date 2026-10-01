@@ -1,0 +1,20 @@
+{
+  "name": "websocket-chat",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Real-time chat: Express + ws + Postgres backend, static client. Root package holds the config gates that are neither.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "check:contrast": "node client/scripts/check-contrast.mjs",
+    "check:render": "node scripts/check-render-yaml.mjs",
+    "check": "npm run check:contrast && npm run check:render"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "js-yaml": "^4.1.0"
+  }
+}

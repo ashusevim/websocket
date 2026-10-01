@@ -32,13 +32,23 @@ jobs:
           # Matches server/package.json "engines" and the Dockerfile base image.
           node-version: '22'
           cache: npm
-          cache-dependency-path: server/package-lock.json
+          # Two lockfiles: the server's, and the root one holding the config
+          # gates (render.yaml schema validation).
+          cache-dependency-path: |
+            server/package-lock.json
+            package-lock.json
 
       # bcrypt ships prebuilt binaries; audit=high fails the job if install
       # scripts are ever blocked, which would surface here rather than as a
       # confusing test failure.
       - name: Install
         working-directory: server
+        run: npm ci
+
+      # Root package exists only for these gates: they are neither client nor
+      # server code, so they get their own install rather than riding along on
+      # the server's dependencies.
+      - name: Install gates
         run: npm ci
 
       - name: Typecheck
@@ -49,7 +59,14 @@ jobs:
       # measured contrast. This recomputes every pair so a colour edit cannot
       # quietly drop body text below 4.5:1 or a focus ring below 3:1.
       - name: Client contrast check
-        run: node client/scripts/check-contrast.mjs
+        run: npm run check:contrast
+
+      # Render rejects a bad Blueprint at deploy time, after the push. This
+      # validates render.yaml against Render's published schema instead, so a
+      # field that does not exist (e.g. `type: db` under `databases`) fails
+      # here with a path rather than on the dashboard three minutes later.
+      - name: Render blueprint check
+        run: npm run check:render
 
       # The integration suite needs a real Postgres: the 409 path depends on a
       # unique constraint and logout revocation depends on a row delete, so a

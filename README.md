@@ -694,6 +694,10 @@ docker-compose up -d
 resources: the API/WebSocket service, the static client, and a Postgres
 database.
 
+The Blueprint is validated against Render's published schema in CI
+(`npm run check:render`), so a file Render would reject fails on push rather
+than partway through a deploy.
+
 **Deploy:**
 
 1. Push the branch.
@@ -873,6 +877,25 @@ that ships.
 A throwaway Postgres runs in Docker (`npm run test:db`). Point the suite
 elsewhere with `TEST_DATABASE_URL`.
 
+### Config gates
+
+```bash
+npm run check            # both gates, from the repo root
+npm run check:contrast   # WCAG AA over every colour pair, both themes
+npm run check:render     # render.yaml against Render's published schema
+```
+
+`check:render` exists because Render rejects a bad Blueprint at *deploy* time,
+after the push, when the only feedback is a message in the dashboard. It
+fetches [`render.com/schema/render.yaml.json`](https://render.com/schema/render.yaml.json)
+and validates against it, so an unknown field fails in CI with a JSON path
+instead of three minutes into a deploy.
+
+It also carries a canary: after validating the real file, it injects
+`type: db` under `databases` into a copy and asserts that this is *rejected*.
+A validator that has never rejected anything proves nothing, so the gate
+checks its own ability to fail.
+
 ### Regressions covered
 
 Each of these was a real bug, and each has a test that fails without the fix:
@@ -890,6 +913,11 @@ Each of these was a real bug, and each has a test that fails without the fix:
   connections"*.
 - **Dead origin allowlist** — `wsAllowedOrigins` sat next to `allowedOrigins`
   unused, while the handshake validated against the other one.
+
+Not every regression belongs in the server suite. **The Blueprint rejected on
+deploy** — `render.yaml` declared `type: db` under `databases`, a key that does
+not exist — is covered by `npm run check:render` instead, which validates the
+file against Render's published schema. `node --test` cannot see a YAML file.
 
 ---
 
