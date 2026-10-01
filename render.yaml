@@ -1,10 +1,19 @@
 # Render blueprint — full-stack WebSocket chat.
 #
-# Deploy: push this branch, then in Render choose "New +" → "Blueprint" and
-# point it at the repo. Render reads this file and creates both services plus
-# the database.
+# WHAT THIS CREATES. One repo, one push, one Blueprint -> three resources:
 #
-# After the first deploy, apply the schema once (see MIGRATION below).
+#   websocket-chat-server   web service. Builds server/Dockerfile. Serves the
+#                           REST API and the WebSocket. This is the backend.
+#   websocket-chat-client   static site. Publishes ./client to a CDN. This is
+#                           the frontend. No build step.
+#   websocket-chat-db       Postgres. Only reachable from inside Render.
+#
+# They are DEPLOYED together (one blueprint, from one repo, no manual upload of
+# either half) but they RUN separately, because they scale differently, ship
+# differently, and must not be able to reach each other's internals.
+#
+# DEPLOY: merge to main, then Render -> New + -> Blueprint -> connect this
+# repo -> select the main branch -> Apply. Nothing else to upload.
 
 services:
   # --- API + WebSocket server -------------------------------------------
@@ -78,14 +87,22 @@ databases:
     ipAllowList: []
     postgresMajorVersion: "16"
 
-# MIGRATION
-# ----------
-# Render does not run schema.sql automatically. On a fresh database the server
-# starts fine but every write fails with 500, because the tables do not exist.
-# Apply the schema once, from your machine, after the database is created:
+# SCHEMA
+# -------
+# No manual step. The server applies server/schema.sql itself on boot, before it
+# accepts traffic (src/db.ts -> applySchema()). Every statement is IF NOT
+# EXISTS, so it is safe on every restart and safe to run concurrently.
 #
-#   psql "<the database's internal connection string>" -f server/schema.sql
+# Set AUTO_MIGRATE=false on the web service if you would rather manage the
+# schema by hand.
 #
-# Copy that string from the Render dashboard: the database's "Connection"
-# dropdown → "Internal Connection String". The schema is idempotent, so
-# re-running it is safe.
+# ALLOWED_ORIGINS
+# ---------------
+# Must be the client's exact origin, e.g. https://chat.ashusevim.dev
+#   - no trailing slash
+#   - no ws:// or wss:// (the Origin header is http/https even on wss)
+# A wrong value here fails as a 403 on the WebSocket connect, which looks
+# nothing like a CORS error.
+#
+# On first deploy you do not know the client URL yet. Put any valid value,
+# confirm both services are live, then come back and set the real one.

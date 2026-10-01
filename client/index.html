@@ -11,6 +11,14 @@
     <link rel="stylesheet" href="styles.css" />
 
     <!--
+      Deployment config. Must load before the main script, which reads
+      window.SERVER_HOST. Kept as a separate file so retargeting the client at a
+      different API is a one-line edit with no code change and no rebuild of
+      anything but this file.
+    -->
+    <script src="config.js"></script>
+
+    <!--
       Resolve the theme before first paint.
 
       This has to be inline and synchronous: an external or deferred script runs

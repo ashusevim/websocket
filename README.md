@@ -719,11 +719,27 @@ Two things to know about the free plan:
   connection rather than serving 500s, so a cold start either succeeds or
   crash-loops visibly in the logs.
 
-To point a deployed client at a different API host without rebuilding:
+### Pointing the client at the API
+
+Once the client and the API are on different hosts, tell the client where the
+API is by editing one line in `client/config.js`:
+
+```js
+window.SERVER_HOST = 'api.ashusevim.dev';   // no scheme, no trailing slash
+```
+
+Leave it empty for local development, where both run on localhost. The file
+exists so retargeting the client is a one-line change with no code edit and no
+rebuild of anything else.
+
+There is also a query override, useful for testing a deploy before committing to
+a hostname:
 
 ```
-https://your-client.onrender.com/?server=api.example.com
+https://chat.ashusevim.dev/?server=websocket-chat-server-ptfw.onrender.com
 ```
+
+The query wins over `config.js`.
 
 ### Schema management
 
