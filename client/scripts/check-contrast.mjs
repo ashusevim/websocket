@@ -12,6 +12,10 @@
  * Nothing here is eyeballed. The generator palette failed its own checklist
  * last round, so every pair is computed.
  *
+ * PAIRS is the contract: it is enumerated rather than swept out of
+ * styles.css, so a new surface whose foreground/background pair is not listed
+ * here is not checked. Add the pair when you add the surface.
+ *
  * Usage: node scripts/check-contrast.mjs   (exits non-zero on failure)
  */
 
