@@ -152,8 +152,12 @@ export function createApp(options: AppOptions = {}): CreatedApp {
     const rateLimitMax = options.rateLimitMax;
     const allowedOrigins = resolveOrigins(env);
 
+    // Checked on every handshake and every CORS preflight. An array scan is
+    // O(n) per check for a list that never changes after boot; a Set is O(1).
+    const allowedOriginSet = new Set(allowedOrigins);
+
     const isOriginAllowed = (origin: string | undefined): boolean =>
-        origin !== undefined && allowedOrigins.includes(origin);
+        origin !== undefined && allowedOriginSet.has(origin);
 
     // Held as named consts so their stores can be reset between tests.
     const apiLimiter = RateLimit({
@@ -179,7 +183,13 @@ export function createApp(options: AppOptions = {}): CreatedApp {
         allowedHeaders: ['Content-Type', 'Authorization'],
     }));
 
-    app.use(express.json());
+    app.use(express.json({
+        // The largest legitimate body this API accepts is a register call
+        // (~50-char username + 128-char password + JSON overhead, under 1kb).
+        // The 100kb default would parse two orders of magnitude of junk
+        // before validation ever saw it; fail fast instead.
+        limit: "10kb",
+    }));
     app.use(apiLimiter);
 
     app.post("/register", async (req, res) => {
@@ -418,13 +428,15 @@ export function createApp(options: AppOptions = {}): CreatedApp {
     });
 
     const getConnectedUsers = (): string[] => {
-        const users: string[] = [];
+        // A Set, not includes-in-an-array: this runs on every join and every
+        // leave, and the old version was O(clients x distinct users) per call.
+        const seen = new Set<string>();
         wss.clients.forEach((client: ChatWebSocket) => {
             if (client.readyState === WebSocket.OPEN && client.username) {
-                if (!users.includes(client.username)) users.push(client.username);
+                seen.add(client.username);
             }
         });
-        return users;
+        return [...seen];
     };
 
     const broadcastUserlist = (): void => {
@@ -442,25 +454,35 @@ export function createApp(options: AppOptions = {}): CreatedApp {
         ws.username = (req as unknown as AuthenticatedRequest).username;
         logger.info(`Client connected: ${ws.username}`);
 
+        // Sliding window without a timer. One setInterval per socket wakes the
+        // event loop every 10s even when the connection is idle — pure
+        // overhead at connection scale — so the window resets lazily on the
+        // next message instead. Semantics match the old ticks: 20 messages per
+        // 10s from connect, then the window reopens.
         let messageCounter = 0;
-        const rateLimitTimer = setInterval(() => {
-            messageCounter = 0;
-        }, MESSAGE_RATE_LIMIT_INTERVAL_MS);
+        let windowStart = Date.now();
 
-        const announcement = {
+        // Serialised once: the old code re-ran JSON.stringify for every
+        // recipient of the same announcement.
+        const announcementPayload = JSON.stringify({
             type: "announcement",
             message: `${ws.username || "unknown"} has joined the chat room`,
-        };
+        });
 
         wss.clients.forEach((client) => {
             if (client !== ws && client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify(announcement));
+                client.send(announcementPayload);
             }
         });
 
         broadcastUserlist();
 
         ws.on("message", (message) => {
+            const now = Date.now();
+            if (now - windowStart >= MESSAGE_RATE_LIMIT_INTERVAL_MS) {
+                messageCounter = 0;
+                windowStart = now;
+            }
             messageCounter++;
             if (messageCounter > MESSAGE_RATE_LIMIT) {
                 logger.warn(`Rate limit exceeded for ${ws.username}, disconnecting`);
@@ -499,7 +521,6 @@ export function createApp(options: AppOptions = {}): CreatedApp {
         });
 
         ws.on("close", () => {
-            clearInterval(rateLimitTimer);
             logger.info(`Client disconnected: ${ws.username}`);
             setTimeout(broadcastUserlist, 100);
         });
@@ -561,6 +582,15 @@ export interface ChatServer extends CreatedApp {
 export function createChatServer(options: AppOptions = {}): ChatServer {
     const { app, wss, close, resetRateLimits } = createApp(options);
     const server = createServer(app);
+
+    // Cloudflare/Render terminates TLS and reuses upstream connections. Node's
+    // 5s keepAliveTimeout drops an idle upstream socket while a client is
+    // still typing credentials, so login -> ticket -> logout each pay a fresh
+    // TCP+TLS handshake. 30s keeps the whole sequence on one connection.
+    // headersTimeout must stay above keepAliveTimeout or Node closes first.
+    server.keepAliveTimeout = 30_000;
+    server.headersTimeout = 35_000;
+
     attachWebSocket(server, wss);
 
     return {

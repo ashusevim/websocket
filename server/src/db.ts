@@ -33,13 +33,28 @@ const ssl = sslEnabled
     : undefined;
 
 const pool = connectionString
-    ? new Pool({ connectionString, ...(ssl ? { ssl } : {}) })
+    ? new Pool({
+        connectionString,
+        // Explicit sizing rather than pg defaults. `max: 10` matches the
+        // previous effective ceiling; `connectionTimeoutMillis: 0` (the pg
+        // default) waits forever for a free connection, so a saturated pool
+        // hangs every request instead of surfacing — 5s fails fast. Idle
+        // connections past 30s are closed rather than held against the
+        // managed database's connection budget.
+        max: 10,
+        idleTimeoutMillis: 30_000,
+        connectionTimeoutMillis: 5_000,
+        ...(ssl ? { ssl } : {}),
+    })
     : new Pool({
         user: process.env.DB_USER || "postgres",
         password: process.env.DB_PASSWORD,
         host: process.env.DB_HOST || "localhost",
         port: parseInt(process.env.DB_PORT || "5432"),
         database: process.env.DB_NAME || "postgres",
+        max: 10,
+        idleTimeoutMillis: 30_000,
+        connectionTimeoutMillis: 5_000,
         ...(ssl ? { ssl } : {}),
     });
 

@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 // is the same wiring the browser gets from <script src="api.js">.
 await import("../api.js");
 
-const { readJSON, resolveServerHost, describeFailure } = globalThis.ChatAPI ?? {};
+const { readJSON, resolveServerHost, describeFailure, fetchWithTimeout } = globalThis.ChatAPI ?? {};
 const CLIENT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const ORIGIN = "https://socketchatapi.ashusevim.dev";
@@ -105,6 +105,102 @@ test("exposes describeFailure", () => {
     assert.equal(typeof describeFailure, "function", "globalThis.ChatAPI.describeFailure is missing");
 });
 
+test("exposes fetchWithTimeout", () => {
+    assert.equal(typeof fetchWithTimeout, "function", "globalThis.ChatAPI.fetchWithTimeout is missing");
+});
+
+/*
+ * fetchWithTimeout exists because the API sleeps on the free tier: the first
+ * request after idle takes 30-60s while the instance wakes, and a dead
+ * connection hangs forever. Without a deadline the sign-in button spins
+ * indefinitely on both. These stub globalThis.fetch — the only seam — and
+ * restore it afterwards.
+ */
+async function withFetchStub(stub, run) {
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = stub;
+    try {
+        await run();
+    } finally {
+        globalThis.fetch = realFetch;
+    }
+}
+
+test("fetchWithTimeout returns a fast response untouched", async () => {
+    await withFetchStub(
+        async () => new Response('{"ticket":"k"}'),
+        async () => {
+            const response = await fetchWithTimeout("https://api.example.com/ws-ticket", {}, 1000);
+            assert.equal(response.status, 200);
+            assert.deepEqual(await response.json(), { ticket: "k" });
+        },
+    );
+});
+
+test("fetchWithTimeout rejects with a deadline error on a hung request", async () => {
+    let signal;
+    await withFetchStub(
+        (url, options) => {
+            signal = options.signal;
+            // A faithful stub: like a real fetch, it rejects when aborted.
+            // A stub that ignores the signal would hang forever and the test
+            // with it — which is precisely the production failure above.
+            return new Promise((_, reject) => {
+                signal?.addEventListener("abort", () => {
+                    reject(new DOMException("The operation was aborted.", "AbortError"));
+                });
+            });
+        },
+        async () => {
+            const start = Date.now();
+            await assert.rejects(
+                fetchWithTimeout("https://api.example.com/login", {}, 50),
+                /Request timed out after 50ms/,
+            );
+            assert.ok(Date.now() - start < 1000, "the deadline did not fire promptly");
+            assert.equal(signal?.aborted, true, "the hung request was never aborted");
+        },
+    );
+});
+
+test("fetchWithTimeout passes non-timeout failures through unwrapped", async () => {
+    // A refused connection must still reach describeFailure as the TypeError
+    // the engines emit — wrapping it here would change the login message.
+    const failure = new TypeError("Failed to fetch");
+    await withFetchStub(
+        async () => {
+            throw failure;
+        },
+        async () => {
+            await assert.rejects(fetchWithTimeout("https://api.example.com/login", {}, 1000), (error) => {
+                assert.equal(error, failure, "expected the original rejection, not a wrapper");
+                return true;
+            });
+        },
+    );
+});
+
+/*
+ * The gate. A deadline only protects the paths that use it; a fifth fetch
+ * added later must go through the helper too, or it hangs the same way the
+ * other four used to. The lookbehind excludes the helper's own name, so the
+ * two counts have to agree exactly.
+ */
+test("every fetch in index.html goes through the timeout helper", async () => {
+    const html = await readFile(path.join(CLIENT_DIR, "index.html"), "utf8");
+    // The literal `fetch(` — `ChatAPI.fetchWithTimeout(` does not contain it,
+    // and neither does `fetchTicket(`. Any match here is a call that bypasses
+    // the deadline.
+    const bare = html.match(/fetch\(/g) ?? [];
+    assert.equal(
+        bare.length,
+        0,
+        `index.html has ${bare.length} bare fetch call(s); route them through ChatAPI.fetchWithTimeout`,
+    );
+    const via = html.match(/ChatAPI\.fetchWithTimeout\(/g) ?? [];
+    assert.ok(via.length >= 4, `expected the 4 auth paths (register, login, logout, ticket), found ${via.length}`);
+});
+
 // The three engines' actual wording for a fetch that never reached a server.
 for (const wording of [
     "Failed to fetch", // Chrome, Edge
@@ -161,6 +257,52 @@ test("both auth entry points report failures through describeFailure", async () 
     assert.ok(
         loginCatch.includes("ChatAPI.describeFailure"),
         "Login's catch no longer routes through describeFailure",
+    );
+});
+
+/*
+ * Reconnect and render budgets. These pin the constants a slow client would
+ * regress by "tuning": the first retry, the jitter, the stop condition that
+ * tells a dead session from a sick network, the message cap, and the flag
+ * that keeps scrollHeight reads out of the message hot path.
+ */
+test("reconnect starts fast, jitters, and only stops on a dead session", async () => {
+    const html = await readFile(path.join(CLIENT_DIR, "index.html"), "utf8");
+    assert.ok(
+        html.includes("let reconnectionInterval = 1000"),
+        "first retry drifted from ~1s back toward the old 5s",
+    );
+    assert.ok(
+        html.includes("Math.random() * reconnectionInterval"),
+        "jitter removed from the backoff; co-dropped clients retry as a herd",
+    );
+    assert.ok(
+        html.includes("error.status === 401"),
+        "ticket failures no longer distinguish expiry (stop) from network (retry)",
+    );
+});
+
+test("the message list is capped on both append paths", async () => {
+    const html = await readFile(path.join(CLIENT_DIR, "index.html"), "utf8");
+    assert.ok(html.includes("const MAX_MESSAGES = 200"), "message cap removed or changed");
+    assert.ok(html.includes("function trimMessages()"), "trimMessages is gone");
+    assert.equal(
+        (html.match(/trimMessages\(\);/g) ?? []).length,
+        2,
+        "expected trimMessages() on the message and announcement paths",
+    );
+});
+
+test("scrolling stays pinned without a layout read per message", async () => {
+    const html = await readFile(path.join(CLIENT_DIR, "index.html"), "utf8");
+    assert.ok(html.includes("let stickToBottom = true"), "stick-to-bottom flag is gone");
+    assert.ok(
+        html.includes("if (!stickToBottom) return;"),
+        "scrollToLatest no longer bails when the user scrolled up",
+    );
+    assert.ok(
+        html.includes("{ passive: true }"),
+        "the scroll listener lost its passive flag and now blocks scrolling",
     );
 });
 
