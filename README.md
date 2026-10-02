@@ -1091,6 +1091,11 @@ Each of these was a real bug, and each has a test that fails without the fix:
   whole document, and browsers report that as a missing image rather than a
   parse error, so nothing appeared in the console. The suite now parses the
   comment bodies, checks the icon link, and pins the tile colour to `--accent`.
+- **The favicon was the wrong colour** — `index.html` declared the icon twice:
+  `favicon.svg`, and further down a violet data-URI left over from the previous
+  palette. Browsers honour the *last* link, so the stale one won; the test
+  passed because it matched the *first*. It now counts the links instead of
+  finding one, which is the whole difference between the two assertions.
 - **A live chat wedged the shutdown** — `gracefulShutdown()` awaited
   `server.close()` before tearing down the WebSockets, but `close()` resolves
   only once every connection it tracks has ended and upgraded sockets are
