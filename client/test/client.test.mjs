@@ -323,3 +323,101 @@ test("the favicon tile colour matches the accent token", async () => {
         `favicon tile ${tile[1]} drifted from the dark theme accent ${darkAccent}`,
     );
 });
+
+/*
+ * Demo credentials: one promise, two files.
+ *
+ * The server seeds DEMO_ACCOUNTS into Postgres; the sign-in card prints a
+ * copy. Nothing joins them at runtime — a static site cannot read server
+ * source, and an endpoint that hands out passwords would be a worse smell than
+ * the duplicate. So the duplication is pinned from this side instead: edit
+ * either file alone and the suite fails rather than shipping a card that
+ * cannot log in.
+ */
+test("the sign-in card shows exactly the credentials the server seeds", async () => {
+    const html = await readFile(path.join(CLIENT_DIR, "index.html"), "utf8");
+    const serverSource = await readFile(
+        path.join(CLIENT_DIR, "..", "server", "src", "demo.ts"),
+        "utf8",
+    );
+
+    const seeded = [...serverSource.matchAll(/username:\s*"([a-zA-Z0-9_]+)",\s*password:\s*"([^"]+)"/g)]
+        .map((match) => ({ username: match[1], password: match[2] }));
+    assert.ok(seeded.length >= 2, `DEMO_ACCOUNTS holds ${seeded.length} entries, expected >= 2`);
+
+    const rows = [...html.matchAll(/data-demo-username="([a-zA-Z0-9_]+)"\s+data-demo-password="([^"]+)"/g)]
+        .map((match) => ({ username: match[1], password: match[2] }));
+    assert.deepEqual(
+        rows,
+        seeded,
+        "client demo rows drifted from DEMO_ACCOUNTS in server/src/demo.ts",
+    );
+
+    // The card is worthless somewhere the visitor never lands.
+    const loginAt = html.indexOf('id="login"');
+    const registerAt = html.indexOf('id="register"');
+    const panelAt = html.indexOf('class="demo-panel"');
+    assert.notEqual(loginAt, -1, 'no element with id="login"');
+    assert.notEqual(panelAt, -1, "index.html has no demo panel");
+    assert.ok(
+        loginAt < panelAt && panelAt < registerAt,
+        "the demo panel is not inside the sign-in view",
+    );
+});
+
+/*
+ * The attributes are what the click handler reads; the spans are what a person
+ * reads. Nothing forces them to agree, so a hand-edit that updates one and not
+ * the other produces a card that fills in credentials it does not display.
+ */
+test("each demo row displays the credentials it will submit", async () => {
+    const html = await readFile(path.join(CLIENT_DIR, "index.html"), "utf8");
+
+    const buttons = [...html.matchAll(
+        /<button[^>]*data-demo-username="([^"]+)"[^>]*data-demo-password="([^"]+)"[^>]*>([\s\S]*?)<\/button>/g,
+    )];
+    assert.equal(buttons.length, 2, `expected 2 demo rows, found ${buttons.length}`);
+
+    for (const [, username, password, inner] of buttons) {
+        assert.ok(
+            inner.includes(`>${username}<`),
+            `the "${username}" row does not display its username`,
+        );
+        assert.ok(
+            inner.includes(`>${password}<`),
+            `the "${username}" row does not display its password`,
+        );
+    }
+});
+
+/*
+ * A demo row must not be a shortcut around the form. Calling Login() directly
+ * would skip the submit handler's validation, loading state and error
+ * rendering, and those would silently stop applying to the one path a reviewer
+ * is most likely to take. requestSubmit() is the version that fires both
+ * constraint validation and the submit event; form.submit() fires neither.
+ */
+test("a demo row submits through the form's own handler", async () => {
+    const html = await readFile(path.join(CLIENT_DIR, "index.html"), "utf8");
+
+    const start = html.indexOf("[data-demo-username]");
+    assert.notEqual(start, -1, "no click handler bound to the demo rows");
+    const block = html.slice(start, html.indexOf("/* ===", start));
+
+    assert.ok(
+        block.includes("loginForm.requestSubmit()"),
+        "demo rows no longer go through the login form's submit handler",
+    );
+    assert.equal(
+        /\bLogin\s*\(/.test(block),
+        false,
+        "demo rows call Login() directly, bypassing validation and the loading state",
+    );
+
+    // And the row they share the form with stays inert while a login is in
+    // flight, so a second click cannot race the first.
+    assert.ok(
+        html.includes("demoButton.disabled = true"),
+        "demo rows stay clickable while a login is in flight",
+    );
+});

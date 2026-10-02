@@ -418,6 +418,94 @@ body:not([data-view="chat"]) #layout {
     border-bottom-color: currentColor;
 }
 
+/*
+ * Demo accounts.
+ *
+ * Credentials seeded by server/src/demo.ts on every boot, so this block is a
+ * statement about the database rather than decoration — delete the rows and
+ * the sign-in card starts lying. The client test suite pins the data-*
+ * attributes to DEMO_ACCOUNTS so neither side can move alone.
+ *
+ * Deliberately unboxed: a tinted panel was tried and rejected, because in the
+ * light theme `--hairline` (#e2e2e6) against `--surface-2` (#f0f0f2) computes
+ * to 1.14:1 — a border that is technically present and practically invisible.
+ * Keeping everything on `--surface` means every pair here is one the contrast
+ * gate already checks for the card itself. A label plus bordered rows reads as
+ * a group without a second nested outline.
+ *
+ * Focus rings come from the global :focus-visible rule above; nothing here
+ * needs to repeat it.
+ */
+.auth-form-container .demo-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.auth-form-container .demo-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.auth-form-container .demo-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+.auth-form-container .demo-note {
+    font-size: 11px;
+    color: var(--text-faint);
+}
+
+.auth-form-container .demo-account {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-sm);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color var(--t-fast) var(--ease);
+}
+
+.auth-form-container .demo-account:hover {
+    border-color: var(--hairline-strong);
+}
+
+.auth-form-container .demo-user {
+    font-weight: 500;
+}
+
+/* Pushes the credential and the action to the right edge, leaving the
+   username as the row's anchor on the left. */
+.auth-form-container .demo-pass {
+    margin-left: auto;
+    font-size: 12.5px;
+    color: var(--text-faint);
+}
+
+.auth-form-container .demo-cta {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent-ink);
+}
+
+.auth-form-container .demo-account:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .error-message,
 .success-message {
     display: none;

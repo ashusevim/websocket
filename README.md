@@ -58,6 +58,11 @@ ticket before connecting. See [WebSocket authentication](#websocket-authenticati
   is pinned to the dark theme's `--accent` by a test: the palette has two
   accents, and a favicon can only carry one, so the brighter of the pair is the
   one that reads on both light and dark tab strips.
+- **Two demo accounts, one click away.** The sign-in screen lists `demo` and
+  `guest` with the passwords the server seeds at boot; clicking a row fills
+  the form and submits it through the ordinary submit path, so validation, the
+  loading state and error handling stay in one place. The rows are disabled
+  while a login is in flight.
 - **Dark, light, or system — with a toggle.** Three-state cycle on every screen,
   including before sign-in. Two complete token sets rather than one plus
   inverted greys. The choice persists, is applied before first paint so there is
@@ -104,6 +109,12 @@ npx serve client -l 5500
 # 5. Open http://localhost:5500
 ```
 
+The sign-in screen carries a **Demo accounts** panel. Click a row to sign in
+as `demo` / `demo1234` or `guest` / `guest1234` — the server seeds both on
+its first boot, so there is nothing to register. Two rows are the point: open
+an incognito window, take the other account, and the two of you are in the
+same room.
+
 `server/schema.sql` is idempotent, so it is safe to re-run against an existing
 database. Two of its indexes are load-bearing:
 
@@ -130,6 +141,7 @@ websocket/
 │   │   ├── index.ts          # Entrypoint: binds the port, handles signals
 │   │   ├── app.ts            # createApp/createChatServer factories
 │   │   ├── db.ts             # PostgreSQL pool (SSL negotiated, not assumed)
+│   │   ├── demo.ts           # DEMO_ACCOUNTS + the idempotent boot seeder
 │   │   ├── logger.ts         # Winston (JSON in production, colour in dev)
 │   │   ├── instrument.ts     # Sentry setup
 │   │   └── utils/
@@ -140,6 +152,7 @@ websocket/
 │   │   ├── utils.test.ts       # Unit: validation + sanitize
 │   │   ├── tickets.test.ts     # Unit: ticket issue/consume/expiry
 │   │   ├── origins.test.ts     # Unit: allowlist parsing + rejection
+│   │   ├── demo.test.ts        # Unit: published credentials vs validators
 │   │   └── integration.test.ts # Real HTTP + WS against real Postgres
 │   ├── scripts/
 │   │   ├── test-db.mjs         # Throwaway Postgres for tests
@@ -790,6 +803,42 @@ This is deliberately not a migration framework. There is one schema file and no
 versioned history yet; `node-pg-migrate` or Prisma becomes worth it at the
 first change that must not re-run.
 
+### Demo accounts
+
+The sign-in screen shows two ready-made accounts, so a visitor can start
+talking to somebody without registering:
+
+| Username | Password |
+|----------|----------|
+| `demo`   | `demo1234` |
+| `guest`  | `guest1234` |
+
+`server/src/demo.ts` seeds them after the schema is applied, on every boot.
+Three properties matter more than the accounts themselves:
+
+- **Idempotent.** `INSERT ... ON CONFLICT (username) DO NOTHING`: the first
+  boot on an empty database creates them, every boot after that is a no-op.
+- **Never overwrites.** An upsert here would reset the password of whoever
+  registered `demo` first — an account takeover triggered by a deploy. A name
+  that is already taken is reported in the boot log and left untouched.
+- **Checked before it is trusted.** The card is a claim about the database, so
+  a name that was taken before the seeder ran and no longer accepts the
+  published password logs a warning naming it, rather than leaving a card that
+  silently cannot log in.
+
+Each side is pinned by a test on the other end. `server/test/demo.test.ts`
+fails if `DEMO_ACCOUNTS` stops passing the same validators `/register` and
+`/login` use — the seeder does `INSERT`, which consults no validator, so a
+short password would otherwise insert cleanly and then be rejected with a 400
+at sign-in. `client/test/client.test.mjs` fails if the card stops matching
+`DEMO_ACCOUNTS`, or if a row stops displaying the credentials it submits.
+
+Nothing joins the two at runtime: a static site cannot read server source, and
+an endpoint that hands out passwords would be a worse smell than the
+duplicate. The values are published in the client by design — they gate no
+privilege and are ordinary rows in `users`. If you delete them, delete the
+card in `client/index.html` in the same change.
+
 ### Dockerfile
 
 `server/Dockerfile`, verbatim:
@@ -883,7 +932,7 @@ npm run test:db:down  # stop the throwaway container
 npm run typecheck
 ```
 
-**83 server tests + 33 client tests.** Node's built-in runner (`node --test`) —
+**89 server tests + 36 client tests.** Node's built-in runner (`node --test`) —
 no test framework dependency.
 
 | Suite | Tests | Covers |
@@ -891,8 +940,9 @@ no test framework dependency.
 | `utils.test.ts` | 16 | Validation bounds, type guards, sanitizer |
 | `tickets.test.ts` | 9 | Issue, consume, single-use, expiry, sweep |
 | `origins.test.ts` | 20 | Allowlist parsing, normalisation, rejection |
-| `integration.test.ts` | 38 | Real HTTP + WebSocket against real Postgres |
-| `client/client.test.mjs` | 33 | Response bodies, failure wording, host rules, markup gates |
+| `demo.test.ts` | 2 | Published credentials clear the API's validators |
+| `integration.test.ts` | 42 | Real HTTP + WebSocket against real Postgres |
+| `client/client.test.mjs` | 36 | Response bodies, failure wording, host rules, markup gates |
 
 The client suite runs from the repo root and covers response-body handling,
 host resolution, and source gates on the markup itself — the favicon link, that
@@ -1072,9 +1122,12 @@ Stated plainly, because knowing these is part of the design:
   no scheduled cleanup of rows older than the JWT lifetime.
 - **No message persistence.** Chat is broadcast only; a message is gone once
   delivered. There is no history to load on reconnect.
-- **No CI.** `npm test` must be run by hand. The suite is self-contained
-  (`npm run test:db` starts its own Postgres), so wiring it to a runner is
-  configuration, not code.
+- **The demo accounts are a claim about live data.** `server/src/demo.ts` seeds
+  them and `client/index.html` prints them, but nothing checks the card
+  against the database at runtime. Delete the rows (or let a name get
+  registered first) and the sign-in screen keeps advertising credentials that
+  will not work until the boot log tells you why. An endpoint serving the
+  current state would close it, at the cost of an API that returns passwords.
 - **No refresh tokens.** A 1-hour expiry means re-login; the `jti` and ticket
   plumbing would extend to refresh tokens without structural change.
 
