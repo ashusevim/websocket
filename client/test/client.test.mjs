@@ -254,14 +254,22 @@ async function loadFavicon() {
     return readFile(FAVICON_PATH, "utf8");
 }
 
-test("index.html declares the favicon", async () => {
+test("index.html declares exactly one favicon link", async () => {
     const html = await readFile(path.join(CLIENT_DIR, "index.html"), "utf8");
-    const link = html.match(/<link[^>]*rel="icon"[^>]*>/);
-    assert.ok(link, "index.html has no <link rel=\"icon\">; browsers fall back to a 404 /favicon.ico");
-    assert.match(link[0], /href="favicon\.svg"/, "the icon link does not point at favicon.svg");
-    assert.match(link[0], /type="image\/svg\+xml"/, "the icon link omits type=\"image/svg+xml\"");
+    const links = html.match(/<link[^>]*rel="icon"[^>]*>/g) ?? [];
+    assert.equal(
+        links.length,
+        1,
+        `expected one <link rel="icon">, found ${links.length}. A second one is not `
+            + "a fallback: browsers honour the last, so an older entry silently replaces "
+            + "the real icon. That is how a violet data-URI icon outlived favicon.svg — "
+            + "this assertion used to match the first link and never see the second.",
+    );
+    const [link] = links;
+    assert.match(link, /href="favicon\.svg"/, "the icon link does not point at favicon.svg");
+    assert.match(link, /type="image\/svg\+xml"/, "the icon link omits type=\"image/svg+xml\"");
     assert.ok(
-        html.indexOf(link[0]) < html.indexOf("</head>"),
+        html.indexOf(link) < html.indexOf("</head>"),
         "the icon link sits outside <head>",
     );
 });
