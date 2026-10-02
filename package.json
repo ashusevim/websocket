@@ -11,11 +11,13 @@
     "check:contrast": "node client/scripts/check-contrast.mjs",
     "check:render": "node scripts/check-render-yaml.mjs",
     "check": "npm run check:contrast && npm run check:render",
-    "test:client": "node --test \"client/test/**/*.test.mjs\""
+    "test:client": "node --test \"client/test/*.test.mjs\"",
+    "test:contrast": "node --test \"client/test/browser/*.test.mjs\""
   },
   "devDependencies": {
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
-    "js-yaml": "^4.1.0"
+    "js-yaml": "^4.1.0",
+    "puppeteer-core": "^25.12.0"
   }
 }

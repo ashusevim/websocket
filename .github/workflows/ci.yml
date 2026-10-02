@@ -55,9 +55,13 @@ jobs:
         working-directory: server
         run: npm run typecheck
 
-      # The client's colour tokens are generated, then corrected against
-      # measured contrast. This recomputes every pair so a colour edit cannot
-      # quietly drop body text below 4.5:1 or a focus ring below 3:1.
+      # The pairs are not listed anywhere: check-contrast.mjs loads the client
+      # into real Chrome, drives every view, theme, viewport and interactive
+      # state, and measures every combination that actually occurs. A second
+      # check proves the sweep exercised every colour-bearing stylesheet rule,
+      # so a pass is measured completeness rather than a comfortable sample.
+      # A colour edit therefore cannot quietly drop body text below 4.5:1 or a
+      # focus ring below 3:1 — and neither can a new surface skip the gate.
       - name: Client contrast check
         run: npm run check:contrast
 
@@ -71,9 +75,20 @@ jobs:
       # Client body-parsing. Guards the failure that shipped as a raw
       # "Unexpected end of JSON input" on login: a 2xx with an empty body must
       # surface as a message the user can act on, and a stray direct .json()
-      # call in index.html reintroduces it silently.
+      # call in index.html reintroduces it silently. Also the pure colour
+      # maths behind the gate — no browser in that path, so it runs fast.
       - name: Client tests
         run: npm run test:client
+
+      # Five Chrome runs, and the only step that needs a browser: the shipped
+      # client passes, then four one-fault fixtures — an unreadable pair, a
+      # rule nothing renders, a selector list only half of which renders, and
+      # a clean control that must exit 0.
+      # Split from the step above because it is an order of magnitude slower.
+      # ubuntu-latest ships Google Chrome; if that ever changes this fails
+      # loudly rather than skipping.
+      - name: Contrast gate tests
+        run: npm run test:contrast
 
       # The integration suite needs a real Postgres: the 409 path depends on a
       # unique constraint and logout revocation depends on a row delete, so a

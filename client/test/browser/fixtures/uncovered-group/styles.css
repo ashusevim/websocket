@@ -1,0 +1,18 @@
+/* Everything passes; the only fault is the selector list on the last rule,
+   whose second member no element ever carries. */
+
+body {
+    margin: 0;
+    padding: 16px;
+    background: #111113;
+    color: #f4f4f5;
+}
+
+.rendered {
+    color: #f4f4f5;
+}
+
+.rendered,
+.never-shown {
+    background: #1a1a20;
+}

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Contrast fixture — one member of a selector list never renders</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!--
+      `.rendered, .never-shown` is one rule with two members. Only the first
+      exists, and `matches()` says yes when *any* member matches — so a gate
+      that credited the whole rule on one hit would call this stylesheet
+      fully checked while `.never-shown` had never been measured. The sweep
+      must insist on every member and name the rule that fell short.
+    -->
+    <p class="rendered">perfectly readable</p>
+</body>
+</html>

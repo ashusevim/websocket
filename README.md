@@ -51,9 +51,12 @@ ticket before connecting. See [WebSocket authentication](#websocket-authenticati
   corroborated by Bun, Algolia, Superlist, CodePen and Apple Developer, which
   independently agree on a near-black base, one contrasting accent, tight radii
   and high-contrast monochrome type. The token pairs that meet are then checked
-  against WCAG by a script that runs in CI. The list is enumerated rather than
-  derived from the stylesheet, so a new surface has to add its own pair to be
-  covered — the gate is explicit, not inferred.
+  against WCAG by a script that runs in CI. The pairs are not listed anywhere:
+  the script loads the client into real Chrome, drives every view, theme,
+  viewport and interactive state, and measures every combination that actually
+  occurs — so a new surface is covered the moment it renders, and a second
+  check confirms the sweep really did reach every colour-bearing rule rather
+  than a comfortable subset of them.
 - **The favicon is the app's own mark, not a default.** `client/favicon.svg`
   redraws the speech bubble from the sign-in screen as a filled silhouette on
   the accent tile — the stroked header version loses its dots below ~32px. SVG
@@ -954,8 +957,8 @@ npm run test:db:down  # stop the throwaway container
 npm run typecheck
 ```
 
-**91 server tests + 36 client tests.** Node's built-in runner (`node --test`) —
-no test framework dependency.
+**91 server tests + 68 client tests + 5 browser contrast tests.** Node's
+built-in runner (`node --test`) — no test framework dependency.
 
 | Suite | Tests | Covers |
 |-------|-------|--------|
@@ -966,6 +969,8 @@ no test framework dependency.
 | `integration.test.ts` | 43 | Real HTTP + WebSocket against real Postgres |
 | `shutdown.test.ts` | 1 | SIGTERM with a chat open still exits cleanly |
 | `client/client.test.mjs` | 36 | Response bodies, failure wording, host rules, markup gates |
+| `client/contrast.test.mjs` | 32 | Colour parsing, compositing, WCAG maths, thresholds, scoring, coverage |
+| `client/browser/contrast-gate.test.mjs` | 5 | The gate end to end in real Chrome, positive and negative controls |
 
 The client suite runs from the repo root and covers response-body handling,
 host resolution, and source gates on the markup itself — the favicon link, that
@@ -973,8 +978,29 @@ host resolution, and source gates on the markup itself — the favicon link, tha
 suite exists for are all the kind where nothing else would fail):
 
 ```bash
-npm run test:client
+npm run test:client    # fast, no browser
 ```
+
+That suite also carries the colour maths the contrast gate depends on —
+parsing every notation Chrome emits, source-over compositing, WCAG relative
+luminance, the per-role floors, and the scoring that decides pass or fail — so
+it is unit-tested like any other module, with no browser in the loop.
+
+The gate itself does need one, and lives in its own command because five Chrome
+runs are an order of magnitude slower than everything above:
+
+```bash
+npm run test:contrast  # pass, fail, uncovered, half-listed, control
+```
+
+It exists to prove the gate can fail. The shipped client must clear both
+halves; a fixture with one deliberately unreadable pair must exit 1 naming that
+pair; a fixture whose stylesheet declares a rule no element ever carries must
+exit 1 naming the rule; and a fixture where only one member of a selector list
+renders must do the same, because `matches('.a, .b')` answers for `.a` and
+would otherwise wave `.b` through unmeasured. A fourth fixture exits 0, so the
+three exits of 1 mean something. A check that could not fail would be worth
+nothing, so most of these tests exist purely to make sure it can.
 
 The integration tests mock nothing. They exercise the actual Express app, the
 actual WebSocket upgrade, and a real database, because the behaviour under test
@@ -996,9 +1022,29 @@ elsewhere with `TEST_DATABASE_URL`.
 
 ```bash
 npm run check            # both gates, from the repo root
-npm run check:contrast   # WCAG AA over the listed pairs, both themes
+npm run check:contrast   # WCAG AA over every pair the rendered page produces
 npm run check:render     # render.yaml against Render's published schema
 ```
+
+`check:contrast` needs no list, because there is none to maintain. It serves
+`client/`, opens it in Chrome, and drives the app through both themes, both
+viewport widths, and every state the globals can reach — logged out, connected,
+offline, drawer open, counter near and over the limit, hover, focus-visible.
+Whatever ink lands on whatever background during that sweep is what gets
+measured: text to 4.5:1, non-text and focus rings to 3:1, borders to a 1.2:1
+visibility floor. Two SC 1.4.3 exceptions are reported in their own section
+instead of being skipped, so an exemption is a visible decision rather than a
+silent gap.
+
+Measuring what happened is not enough on its own — a sweep that quietly failed
+to reach a rule would produce a clean report. So the run also cross-checks
+against the stylesheet: every rule declaring a colour-bearing property must
+have matched a live element at some point, and any that did not is listed as
+uncovered. A rule with a selector list (`.error-message, .success-message`)
+counts only when *each* member matched: `matches()` answers for the whole list
+as soon as any one member hits, so under the looser rule the error banner
+alone satisfied it and deleting the step that shows the success banner would
+have cost the gate nothing. Both checks must pass.
 
 `check:render` exists because Render rejects a bad Blueprint at *deploy* time,
 after the push, when the only feedback is a message in the dashboard. It

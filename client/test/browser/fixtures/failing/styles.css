@@ -1,0 +1,16 @@
+/* One colour-bearing rule that passes, one that does not.
+   Both match a live element, so the fixture fails on contrast alone. */
+
+body {
+    margin: 0;
+    padding: 16px;
+    background: #111113;
+    color: #f4f4f5;
+}
+
+.bad {
+    margin: 0;
+    padding: 8px;
+    background: #808080;
+    color: #777777;
+}

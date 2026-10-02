@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Contrast fixture — one rule nothing renders</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!--
+      Every colour on this page passes. The stylesheet also declares
+      `.never-rendered`, which no element ever carries, so the sweep can
+      measure everything perfectly and still not have checked that rule.
+      The gate must catch the gap and name the selector.
+    -->
+    <p class="visible">perfectly readable</p>
+</body>
+</html>

@@ -1,115 +1,181 @@
 #!/usr/bin/env node
 /**
- * WCAG contrast checker for the chat client's colour tokens.
+ * WCAG contrast gate for the chat client.
  *
- * Palette direction is taken from real production references in the inspo
- * archive, where six dark app sites agree: a near-black charcoal base, a
- * monochrome/high-contrast type scale, and exactly one accent that contrasts
- * in hue with the base. Linear's design system is the archetype -- it names
- * its own colour words as "monochrome, muted, high-contrast" and uses radii
- * of 0/2/4/6 rather than the large soft radii a generated palette defaults to.
+ * The pairs are not listed anywhere. They are read off a rendered page —
+ * Chrome loads client/, the sweep drives every view, theme, viewport and
+ * interactive state the app can reach, and every ink/background/border/focus
+ * combination that actually occurs is measured. styles.css is consulted for
+ * one thing only: which rules must have been exercised for the measurement to
+ * be complete.
  *
- * Nothing here is eyeballed. The generator palette failed its own checklist
- * last round, so every pair is computed.
+ * Two independent checks, both required:
  *
- * PAIRS is the contract: it is enumerated rather than swept out of
- * styles.css, so a new surface whose foreground/background pair is not listed
- * here is not checked. Add the pair when you add the surface.
+ *   contrast   each unique pair clears its floor (see ROLES in lib/contrast.mjs)
+ *   coverage   every colour-bearing rule had every member of its selector
+ *              list matched by a live element at some point
  *
- * Usage: node scripts/check-contrast.mjs   (exits non-zero on failure)
+ * A gate that measured correctly but skipped a rule would be worse than no
+ * gate — it would assert completeness it had not earned — which is why the
+ * second check exists and is not optional.
+ *
+ * Exits non-zero on any failure.
+ *
+ * Usage:
+ *   node scripts/check-contrast.mjs                # measure client/
+ *   node scripts/check-contrast.mjs --root <dir>   # measure another root
+ *   node scripts/check-contrast.mjs --quiet        # summary and failures only
+ *
+ * Requires a system Chrome (or CHROME_PATH). Nothing is downloaded.
  */
 
-const hex = (h) => {
-    const clean = h.replace('#', '').trim();
-    const full = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean;
-    return [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16));
-};
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { launchBrowser, runGate } from './lib/gate.mjs';
+import { score, coverage, EXEMPT_REASON, INACTIVE_REASON } from './lib/contrast.mjs';
 
-const luminance = (rgb) => {
-    const [r, g, b] = rgb.map((v) => {
-        const c = v / 255;
-        return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-    });
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-};
+const CLIENT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-const ratio = (a, b) => {
-    const [hi, lo] = [luminance(hex(a)), luminance(hex(b))].sort((x, y) => y - x);
-    return (hi + 0.05) / (lo + 0.05);
-};
+function parseArgs(argv) {
+    const args = { root: CLIENT_ROOT, quiet: false };
+    for (let i = 0; i < argv.length; i += 1) {
+        const flag = argv[i];
+        if (flag === '--quiet') args.quiet = true;
+        else if (flag === '--root') {
+            const value = argv[i + 1];
+            if (value === undefined) {
+                console.error('check-contrast: --root needs a directory');
+                process.exit(2);
+            }
+            args.root = path.resolve(value);
+            i += 1;
+        } else if (flag === '--help' || flag === '-h') {
+            console.log('usage: check-contrast.mjs [--root <dir>] [--quiet]');
+            process.exit(0);
+        } else {
+            console.error(`check-contrast: unknown argument ${JSON.stringify(flag)}`);
+            process.exit(2);
+        }
+    }
+    return args;
+}
 
-const PALETTE = {
-    dark: {
-        bg: '#0a0a0b',
-        surface: '#111113',
-        surface2: '#191920',
-        surface3: '#24242e',
-        text: '#f4f4f5',
-        dim: '#a8a8b3',
-        faint: '#86868f',
-        accent: '#e3c778',
-        onAccent: '#0a0a0b',
-        success: '#5ee08a',
-        danger: '#ff8080',
-        hairline: '#2a2a33',
-        hairlineStrong: '#3a3a46',
-    },
-    light: {
-        bg: '#f7f7f8',
-        surface: '#ffffff',
-        surface2: '#f0f0f2',
-        surface3: '#e4e4e8',
-        text: '#0a0a0b',
-        dim: '#54545e',
-        faint: '#6b6b76',
-        accent: '#8a6d1f',
-        onAccent: '#fffdf5',
-        success: '#146c43',
-        danger: '#b42318',
-        hairline: '#e2e2e6',
-        hairlineStrong: '#cfcfd6',
-    },
-};
+const themeMarks = (themes) => ['dark', 'light']
+    .filter((theme) => themes.has(theme))
+    .map((theme) => theme[0].toUpperCase())
+    .join('') || '?';
 
-/** [fg, bg, minimum, label] */
-const PAIRS = [
-    ['text', 'surface', 4.5, 'body text on card'],
-    ['text', 'surface2', 4.5, 'body text on muted surface'],
-    ['text', 'bg', 4.5, 'body text on page'],
-    ['dim', 'surface', 4.5, 'secondary text on card'],
-    ['dim', 'bg', 4.5, 'secondary text on page'],
-    ['faint', 'surface', 4.5, 'meta text on card'],
-    ['faint', 'surface2', 4.5, 'meta text on muted surface'],
-    ['faint', 'bg', 4.5, 'meta text on page'],
-    ['onAccent', 'accent', 4.5, 'label on filled action'],
-    ['accent', 'surface', 4.5, 'accent text / own-message meta on card'],
-    ['accent', 'bg', 4.5, 'accent text on page'],
-    ['accent', 'surface3', 3, 'accent on raised surface'],
-    ['success', 'surface', 4.5, 'connected status text'],
-    ['danger', 'surface', 4.5, 'destructive text'],
-    ['hairline', 'surface', 1.2, 'hairline (decorative)'],
-    ['hairlineStrong', 'surface', 1.2, 'hovered hairline (decorative)'],
-];
+const describe = (pair) => (pair.between
+    ? `${pair.fg} between ${pair.on} and ${pair.between}`
+    : `${pair.fg} on ${pair.on}`);
 
-let failures = 0;
-for (const mode of ['dark', 'light']) {
-    const p = PALETTE[mode];
-    console.log(`\n${mode.toUpperCase()}`);
-    console.log('-'.repeat(64));
-    for (const [fg, bg, min, label] of PAIRS) {
-        const v = ratio(p[fg], p[bg]);
-        const pass = v >= min;
-        if (!pass) failures++;
-        console.log(
-            `  ${pass ? 'PASS' : 'FAIL'}  ${v.toFixed(2).padStart(5)}:1  ` +
-            `(min ${min.toFixed(1)})  ${label}`,
-        );
+// The same colours can appear twice in the table — once judged, once exempt —
+// because the exemption is part of what makes the pair a distinct decision.
+// Without this tag two identical-looking rows would read as a duplicate.
+const exemptTag = (pair) => (pair.exempt === INACTIVE_REASON
+    ? ' [inactive]'
+    : pair.exempt === EXEMPT_REASON ? ' [decorative]' : '');
+
+function printPair(pair, indent = '  ') {
+    const marks = themeMarks(pair.themes);
+    // 64 fits the longest cell — the SC 1.4.3 reason (49) plus its tag — so
+    // the exempt rows, which sit in this table as well as in their own
+    // section, do not push the columns out of line.
+    console.log(
+        `${indent}${pair.value.toFixed(2)}:1  ${pair.role.padEnd(8)} `
+        + `${(describe(pair) + exemptTag(pair)).padEnd(64)} `
+        + `${marks.padEnd(3)} ×${String(pair.count).padEnd(5)} ${pair.examples[0]}`,
+    );
+}
+
+async function main() {
+    const args = parseArgs(process.argv.slice(2));
+
+    console.log('WCAG contrast gate — measured in Chrome');
+    console.log(`  root     ${path.relative(process.cwd(), args.root) || '.'}`);
+    console.log('  themes   dark, light');
+    console.log('  viewport 1280×900 (desktop) and 480×900 (mobile)');
+    console.log('');
+
+    const browser = await launchBrowser();
+    let result;
+    try {
+        result = await runGate({ root: args.root, browser });
+    } finally {
+        await browser.close().catch(() => {});
+    }
+
+    const { pairs, failures, exempted } = score(result.records);
+    const cover = coverage(result.rules, result.exercised);
+    const exit = failures.length > 0 || cover.missing.length > 0 || result.failures.length > 0;
+
+    if (failures.length > 0) {
+        console.log('BELOW THE REQUIRED CONTRAST');
+        for (const pair of failures) {
+            console.log(`  ${pair.value.toFixed(2)}:1 needs ${pair.floor.toFixed(2)}  ${pair.role.padEnd(8)} ${describe(pair)}  [${themeMarks(pair.themes)}]`);
+            console.log(`    seen on ${pair.examples.join(', ')}`);
+        }
+        console.log('');
+    }
+
+    if (cover.missing.length > 0) {
+        console.log('COLOUR-BEARING RULES THAT WERE NEVER EXERCISED');
+        console.log('  For each of these the sweep never saw a rendered element');
+        console.log('  matching every selector in the rule, so nothing in the');
+        console.log('  report above covers it.');
+        for (const rule of cover.missing) {
+            const media = rule.media.length > 0 ? `  @media ${rule.media.join(' and ')}` : '';
+            console.log(`  ${rule.selector}${media}`);
+            console.log(`    sets: ${rule.props.join(', ')}`);
+        }
+        console.log('');
+    }
+
+    if (result.failures.length > 0) {
+        console.log('DRIVING ERRORS');
+        console.log('  A state the gate tried to put the page into did not apply.');
+        for (const failure of result.failures) console.log(`  ${failure}`);
+        console.log('');
+    }
+
+    if (!args.quiet) {
+        if (exempted.length > 0) {
+            console.log('BELOW FLOOR BUT EXEMPT (SC 1.4.3 exceptions)');
+            for (const pair of exempted) {
+                console.log(`  ${pair.value.toFixed(2)}:1 (floor ${pair.floor.toFixed(2)})  ${pair.role.padEnd(8)} ${describe(pair).padEnd(48)} ${themeMarks(pair.themes)}  ${pair.exempt}`);
+            }
+            console.log('');
+        }
+
+        console.log(`PAIRS (${pairs.length} unique, grouped by role, lowest first)`);
+        let lastRole = null;
+        for (const pair of pairs) {
+            if (pair.role !== lastRole) {
+                lastRole = pair.role;
+                console.log(`  ${pair.role} — min ${pair.floor.toFixed(2)}:1`);
+            }
+            printPair(pair, '    ');
+        }
+        console.log('');
+    }
+
+    const below = exempted.length;
+    console.log(
+        `${pairs.length} unique pairs · ${failures.length} below floor`
+        + ` · ${below} exempt below floor`
+        + ` · coverage ${cover.covered}/${cover.total} rules`
+        + ` · ${result.failures.length} driving errors`,
+    );
+
+    if (exit) {
+        console.log('FAILED');
+        process.exitCode = 1;
+    } else {
+        console.log('OK');
     }
 }
 
-console.log('\n' + '='.repeat(64));
-if (failures) {
-    console.error(`${failures} pair(s) below the required contrast.`);
-    process.exit(1);
-}
-console.log('All pairs meet WCAG AA (4.5:1 text, 3:1 for UI boundaries).');
+main().catch((error) => {
+    console.error(`check-contrast: ${error.message}`);
+    process.exitCode = 1;
+});

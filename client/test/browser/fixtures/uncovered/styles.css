@@ -1,0 +1,19 @@
+/* Two rules that pass, one that can never match. The gate's coverage half
+   exists for exactly this: a measurement that never saw `.never-rendered`
+   cannot claim to have checked it. */
+
+body {
+    margin: 0;
+    padding: 16px;
+    background: #111113;
+    color: #f4f4f5;
+}
+
+.visible {
+    color: #f4f4f5;
+}
+
+.never-rendered {
+    color: #ff00ff;
+    background: #00ff00;
+}
