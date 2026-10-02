@@ -760,11 +760,12 @@ than partway through a deploy.
 
 1. Push the branch.
 2. In Render: **New +** → **Blueprint** → connect the repo → apply.
-3. Set `ALLOWED_ORIGINS` on the server to the client's URL, e.g.
-   `https://websocket-chat-client.onrender.com`. Render marks it
-   `sync: false`, so it will prompt you. **A wrong value here shows up as a 403
-   on connect, not a CORS error** — the WebSocket handshake checks the same
-   list.
+3. Set `ALLOWED_ORIGINS` on the server to the client's origin, e.g.
+   `https://chat.ashusevim.dev` (comma-separate a second one, such as
+   `https://websocket-chat-client.onrender.com`, if you serve both). Render
+   marks it `sync: false`, so it will prompt you. **A wrong value here shows
+   up as a 403 on connect, not a CORS error** — the WebSocket handshake checks
+   the same list.
 4. Deploy the client, then open its URL.
 
 No manual migration step is needed. The server applies `schema.sql` at boot
