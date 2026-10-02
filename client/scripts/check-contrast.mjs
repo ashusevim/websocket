@@ -48,6 +48,7 @@ const PALETTE = {
         success: '#5ee08a',
         danger: '#ff8080',
         hairline: '#2a2a33',
+        hairlineStrong: '#3a3a46',
     },
     light: {
         bg: '#f7f7f8',
@@ -62,6 +63,7 @@ const PALETTE = {
         success: '#146c43',
         danger: '#b42318',
         hairline: '#e2e2e6',
+        hairlineStrong: '#cfcfd6',
     },
 };
 
@@ -82,6 +84,7 @@ const PAIRS = [
     ['success', 'surface', 4.5, 'connected status text'],
     ['danger', 'surface', 4.5, 'destructive text'],
     ['hairline', 'surface', 1.2, 'hairline (decorative)'],
+    ['hairlineStrong', 'surface', 1.2, 'hovered hairline (decorative)'],
 ];
 
 let failures = 0;

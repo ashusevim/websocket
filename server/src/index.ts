@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/node";
 import pool, { applySchema } from "./db.js";
 import logger from "./logger.js";
 import { createChatServer, resolveOrigins } from "./app.js";
+import { seedDemoAccounts } from "./demo.js";
 
 /**
  * Process entrypoint.
@@ -64,6 +65,32 @@ async function start(): Promise<void> {
         logger.info("Database schema verified");
     } catch (error) {
         logger.error("Failed to apply the database schema:", error);
+        process.exit(1);
+    }
+
+    // The sign-in screen prints two demo accounts, so the database has to
+    // actually contain them. Fails the same way as the schema above: a seeder
+    // that half-ran would leave the card advertising credentials that do not
+    // work, which is a worse first impression than a deploy log that names the
+    // error.
+    try {
+        const report = await seedDemoAccounts(pool);
+
+        if (report.created.length > 0) {
+            logger.info(`Demo accounts created: ${report.created.join(", ")}`);
+        }
+        if (report.verified.length > 0) {
+            logger.info(`Demo accounts already present: ${report.verified.join(", ")}`);
+        }
+        if (report.taken.length > 0) {
+            logger.warn(
+                `Demo account name(s) already registered by someone else: ${report.taken.join(", ")}. ` +
+                "The rows were left untouched, so the credentials shown on the sign-in " +
+                "screen will not match them.",
+            );
+        }
+    } catch (error) {
+        logger.error("Failed to seed the demo accounts:", error);
         process.exit(1);
     }
 

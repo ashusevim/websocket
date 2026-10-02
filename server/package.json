@@ -10,7 +10,7 @@
     "build": "tsc",
     "start": "node dist/src/index.js",
     "typecheck": "tsc --noEmit",
-    "test:unit": "npm run build && node --test dist/test/utils.test.js dist/test/tickets.test.js dist/test/origins.test.js",
+    "test:unit": "npm run build && node --test dist/test/utils.test.js dist/test/tickets.test.js dist/test/origins.test.js dist/test/demo.test.js",
     "test:db": "node scripts/test-db.mjs up",
     "test:db:down": "node scripts/test-db.mjs down",
     "test:integration": "npm run test:db && npm run build && node scripts/run-integration.mjs",

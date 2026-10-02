@@ -6,6 +6,7 @@ import jwt from "jsonwebtoken";
 
 import pool from "../src/db.js";
 import { createChatServer, type ChatServer } from "../src/app.js";
+import { DEMO_ACCOUNTS, seedDemoAccounts } from "../src/demo.js";
 import { __reset as resetTickets } from "../src/utils/tickets.js";
 
 /**
@@ -719,6 +720,98 @@ describe("WebSocket messaging", () => {
             assert.equal((await received).message, "still here");
         } finally {
             conn.close();
+        }
+    });
+});
+
+/*
+ * The demo accounts printed on the sign-in card.
+ *
+ * What is actually at stake is not "did the INSERT run" but a promise made to
+ * the visitor in the browser: those two rows must exist, they must accept the
+ * password the card publishes, and a deploy must never change anybody's
+ * password. `beforeEach` truncates `users`, so every test starts from an empty
+ * database — which is also the state a freshly created Render instance boots
+ * into, and the reason seeding has to be safe on both the first and the
+ * thousandth run.
+ */
+describe("demo accounts", () => {
+    test("seeds both published accounts into an empty database", async () => {
+        const report = await seedDemoAccounts(pool);
+
+        assert.deepEqual([...report.created], ["demo", "guest"]);
+        assert.deepEqual(report.verified, [], "nothing should have existed yet");
+        assert.deepEqual(report.taken, [], "nothing should have been squatted yet");
+
+        const rows = await pool.query("SELECT username FROM users ORDER BY username");
+        assert.deepEqual(
+            rows.rows.map((row) => row.username),
+            ["demo", "guest"],
+        );
+    });
+
+    test("re-running on a booted database changes nothing", async () => {
+        await seedDemoAccounts(pool);
+        const before = await pool.query(
+            "SELECT username, password_hash FROM users ORDER BY username",
+        );
+
+        const report = await seedDemoAccounts(pool);
+
+        assert.deepEqual(report.created, [], "a second boot must not insert");
+        assert.deepEqual([...report.verified], ["demo", "guest"]);
+
+        const after = await pool.query(
+            "SELECT username, password_hash FROM users ORDER BY username",
+        );
+        assert.deepEqual(after.rows, before.rows);
+
+        // bcrypt salts every hash, so an upsert would rewrite them to bytes
+        // that differ for the same password. Identical bytes prove the rows
+        // were not touched at all.
+        assert.equal(after.rows.length, 2, "row count must not grow across boots");
+    });
+
+    test("never overwrites a name someone registered first", async () => {
+        // A reviewer who signs up as `demo` before the first deploy owns that
+        // name. Seeding with ON CONFLICT DO UPDATE would reset their password
+        // on every restart — an account takeover triggered by a deploy — so the
+        // row has to be left alone and reported instead.
+        const theirs = "taken-over-credentials";
+
+        await request(server.app)
+            .post("/register")
+            .send({ username: "demo", password: theirs })
+            .expect(201);
+
+        const report = await seedDemoAccounts(pool);
+
+        assert.deepEqual(report.created, ["guest"], "guest was still free");
+        assert.deepEqual(report.taken, ["demo"], "the squatted name must be reported");
+
+        // Their password still works, and the one on the card does not.
+        await request(server.app)
+            .post("/login")
+            .send({ username: "demo", password: theirs })
+            .expect(200);
+        await request(server.app)
+            .post("/login")
+            .send({ username: "demo", password: "demo1234" })
+            .expect(401);
+    });
+
+    test("the credentials on the card actually log in", async () => {
+        // The whole feature in one assertion: this is the request the browser
+        // makes when someone clicks a demo row.
+        await seedDemoAccounts(pool);
+
+        for (const { username, password } of DEMO_ACCOUNTS) {
+            const res = await request(server.app)
+                .post("/login")
+                .send({ username, password })
+                .expect(200);
+
+            assert.ok(res.body.token, `${username} logged in without a session token`);
         }
     });
 });

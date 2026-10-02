@@ -162,6 +162,34 @@
 
             <div class="divider">or</div>
 
+            <!--
+              Credentials seeded by server/src/demo.ts on every boot. The two
+              sides are pinned to each other by a test on each end: the client
+              suite fails if this markup stops matching DEMO_ACCOUNTS, and the
+              server suite fails if DEMO_ACCOUNTS stops passing the validators
+              /register and /login use. The data-* attributes are what the
+              click handler reads and the spans are what a person reads, so the
+              suite checks those against each other too.
+            -->
+            <div class="demo-panel">
+                <div class="demo-head">
+                    <span class="demo-title">Demo accounts</span>
+                    <span class="demo-note">seeded at start</span>
+                </div>
+                <button type="button" class="demo-account"
+                    data-demo-username="demo" data-demo-password="demo1234">
+                    <span class="demo-user">demo</span>
+                    <span class="demo-pass">demo1234</span>
+                    <span class="demo-cta">Enter</span>
+                </button>
+                <button type="button" class="demo-account"
+                    data-demo-username="guest" data-demo-password="guest1234">
+                    <span class="demo-user">guest</span>
+                    <span class="demo-pass">guest1234</span>
+                    <span class="demo-cta">Enter</span>
+                </button>
+            </div>
+
             <p class="switch-text">No account yet? <a href="#" id="show-register-link">Create one</a></p>
         </div>
 
@@ -768,10 +796,19 @@
             const button = document.getElementById('login-btn');
             setButtonLoading(button, true);
 
+            // The demo rows submit this same form, so they belong to the same
+            // in-flight window as the Sign in button. Leaving them clickable
+            // would let a second login race the first.
+            const demoButtons = document.querySelectorAll('.demo-account');
+            demoButtons.forEach((demoButton) => { demoButton.disabled = true; });
+
             Login(
                 loginForm.querySelector('input[name="username"]').value,
                 loginForm.querySelector('input[name="password"]').value,
-            ).finally(() => setButtonLoading(button, false));
+            ).finally(() => {
+                setButtonLoading(button, false);
+                demoButtons.forEach((demoButton) => { demoButton.disabled = false; });
+            });
         });
 
         registerForm.addEventListener('submit', (event) => {
@@ -799,6 +836,23 @@
             event.preventDefault();
             hideError(document.getElementById('login-error'));
             showView('register');
+        });
+
+        /*
+         * Demo accounts.
+         *
+         * Fill the form and submit it through the ordinary submit path rather
+         * than calling Login() directly: that keeps validation, the loading
+         * state and the error rendering in exactly one place. requestSubmit()
+         * (not submit()) is what fires those — submit() skips validation and
+         * fires no event, so the handler above would never run.
+         */
+        document.querySelectorAll('[data-demo-username]').forEach((button) => {
+            button.addEventListener('click', () => {
+                loginForm.querySelector('input[name="username"]').value = button.dataset.demoUsername;
+                loginForm.querySelector('input[name="password"]').value = button.dataset.demoPassword;
+                loginForm.requestSubmit();
+            });
         });
 
         /* =====================================================================
