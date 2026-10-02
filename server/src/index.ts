@@ -103,23 +103,44 @@ void start();
 
 let shuttingDown = false;
 
+/**
+ * How long the graceful path gets before the process exits anyway.
+ *
+ * A deadline rather than an open-ended wait: a client that holds a socket open
+ * would otherwise keep the process alive until the platform's SIGKILL, which is
+ * exactly what skips the Sentry flush and the pool drain below — the two things
+ * this function exists to do.
+ */
+const SHUTDOWN_DEADLINE_MS = 10_000;
+
 async function gracefulShutdown(): Promise<void> {
     if (shuttingDown) return;
     shuttingDown = true;
 
     logger.info('Shutdown signal received, starting graceful shutdown...');
 
-    // 1. Stop accepting new connections.
-    await new Promise<void>((resolve, reject) => {
-        server.close((err) => (err ? reject(err) : resolve()));
-    });
-    logger.info('HTTP server closed');
+    const deadline = setTimeout(() => {
+        logger.error(
+            `Shutdown did not finish within ${SHUTDOWN_DEADLINE_MS}ms, exiting anyway`,
+        );
+        process.exit(1);
+    }, SHUTDOWN_DEADLINE_MS);
+    // unref so the timer never holds the event loop open on its own.
+    deadline.unref();
 
-    // 2. Tear down live WebSocket connections and the HTTP listener.
+    // 1. Tear down the WebSocket clients and stop the listener, as one step.
+    //
+    //    These must not be split. `server.close()` resolves only once every
+    //    connection it is tracking has ended, and the upgraded sockets are
+    //    still counted by it — so awaiting `server.close()` *before*
+    //    terminating the clients waits for connections that only shutdown()
+    //    can close, and shutdown() is never reached. One live chat deadlocked
+    //    the process until SIGKILL; shutdown() owns the sequence, and the
+    //    entrypoint does not reorder it.
     await shutdown();
-    logger.info('WebSocket server closed');
+    logger.info('HTTP and WebSocket server closed');
 
-    // 3. Flush buffered Sentry events before the process goes away, so a
+    // 2. Flush buffered Sentry events before the process goes away, so a
     //    crash on shutdown is not silently dropped.
     try {
         await Sentry.close(2000);
@@ -128,7 +149,7 @@ async function gracefulShutdown(): Promise<void> {
         logger.error('Error during Sentry close: ', err);
     }
 
-    // 4. Release database connections.
+    // 3. Release database connections.
     await pool.end();
     logger.info('Database pool closed');
 

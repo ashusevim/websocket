@@ -19,6 +19,9 @@ const child = spawn(
         "--test",
         "--test-concurrency=1",
         "dist/test/integration.test.js",
+        // Second: it boots its own copy of the entrypoint against the same
+        // database, so it runs after the suite that owns that data.
+        "dist/test/shutdown.test.js",
     ],
     {
         stdio: "inherit",
