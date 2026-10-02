@@ -35,8 +35,8 @@ ticket before connecting. See [WebSocket authentication](#websocket-authenticati
   reconnection with exponential backoff
 - **Security**: rate limiting, type-guarded input validation, single origin
   allowlist for CORS and the handshake, parameterized SQL
-- **Tests**: 63 unit and integration tests, no mocking of the database or the
-  HTTP/WS stack
+- **Tests**: 89 unit and integration tests (plus 36 on the client), no mocking
+  of the database or the HTTP/WS stack
 - **Monitoring**: Winston (JSON in production), Sentry error tracking
 - **Graceful Shutdown**: closes sockets, flushes Sentry, then drains the pool
 - **Production Ready**: multi-stage Docker image (non-root), health check,
@@ -1108,7 +1108,7 @@ against a real deployment, not asserted.
 - ✅ Rate limiting
 - ✅ Error monitoring (Sentry), debug route disabled in production
 - ✅ Structured logging (Winston)
-- ✅ 63 unit + integration tests (`npm test`)
+- ✅ 89 unit + integration tests (`npm test`), 36 client tests
 
 ### Known Gaps
 
