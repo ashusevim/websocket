@@ -3,10 +3,15 @@
 # WHAT THIS CREATES. One repo, one push, one Blueprint -> three resources:
 #
 #   websocket-chat-server   web service. Builds server/Dockerfile. Serves the
-#                           REST API and the WebSocket. This is the backend.
+#                           REST API and the WebSocket. This is the backend,
+#                           on socketchatapi.ashusevim.dev.
 #   websocket-chat-client   static site. Publishes ./client to a CDN. This is
-#                           the frontend. No build step.
+#                           the frontend, on chat.ashusevim.dev. No build step.
 #   websocket-chat-db       Postgres. Only reachable from inside Render.
+#
+# The two custom domains are declared under each service's `domains:` so they
+# travel with the file. See ALLOWED_ORIGINS at the foot for how the three
+# fit together.
 #
 # They are DEPLOYED together (one blueprint, from one repo, no manual upload of
 # either half) but they RUN separately, because they scale differently, ship
@@ -24,6 +29,11 @@ services:
     dockerContext: ./server
     plan: free
     healthCheckPath: /health
+    # Custom domain. Declared here rather than only in the dashboard so the
+    # Blueprint owns it: DNS and certificate are part of the apply, and a
+    # domain nobody can see in the repo is a domain nobody can review.
+    domains:
+      - socketchatapi.ashusevim.dev
     # Free instances sleep after inactivity and are restarted roughly monthly,
     # which is why ALLOWED_ORIGINS and the client's server URL are configuration
     # rather than hardcoded values.
@@ -41,7 +51,8 @@ services:
       # REQUIRED: the server exits at boot if this is unset or invalid. It must
       # list the client's exact origin. A ws:// or wss:// entry is wrong here:
       # the Origin header is always http/https, even on a wss connection.
-      # Replace with your real client URL after the first deploy.
+      # sync: false, so Render holds the value and the blueprint cannot
+      # overwrite it. The current origins are listed at the foot of this file.
       - key: ALLOWED_ORIGINS
         sync: false
 
@@ -51,6 +62,13 @@ services:
     runtime: static
     staticPublishPath: ./client
     buildCommand: ""
+    # The site's own origin, and the third half of one configuration: the API
+    # domain above serves this one, and ALLOWED_ORIGINS on the API must list
+    # it exactly. The WebSocket handshake checks that list and answers 403
+    # rather than a CORS error when it is missing, which is why all three
+    # live in one file.
+    domains:
+      - chat.ashusevim.dev
     routes:
       - type: rewrite
         source: /*
@@ -100,6 +118,21 @@ databases:
 # Set AUTO_MIGRATE=false on the web service if you would rather manage the
 # schema by hand.
 #
+# DOMAINS
+# -------
+# Each service declares its custom domain under `domains:`, so the names are
+# part of the Blueprint rather than a change someone made in the dashboard:
+#
+#   websocket-chat-server   socketchatapi.ashusevim.dev
+#   websocket-chat-client   chat.ashusevim.dev
+#
+# The API's name is also the value of `window.SERVER_HOST` in
+# client/config.js, and both names still answer on Render's own *.onrender.com
+# addresses. Three things have to agree — this file, client/config.js, and
+# ALLOWED_ORIGINS below — so they are written out together here; a disagreement
+# between the last two shows up as a 403 on connect rather than as a failed
+# deploy.
+#
 # ALLOWED_ORIGINS
 # ---------------
 # REQUIRED. The server refuses to start without it (src/index.ts), and there is
@@ -115,6 +148,9 @@ databases:
 #   - a trailing slash is fine: resolveOrigins() normalises to parsed.origin
 #
 # Comma-separate to allow more than one.
+#
+# Current value (held in the dashboard, not in this file):
+#     https://chat.ashusevim.dev,https://websocket-chat-client.onrender.com
 #
 # On first deploy you do not know the client URL yet. Put any valid origin,
 # confirm both services are live, then set the real one.
