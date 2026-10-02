@@ -1122,12 +1122,14 @@ Stated plainly, because knowing these is part of the design:
   no scheduled cleanup of rows older than the JWT lifetime.
 - **No message persistence.** Chat is broadcast only; a message is gone once
   delivered. There is no history to load on reconnect.
-- **The demo accounts are a claim about live data.** `server/src/demo.ts` seeds
-  them and `client/index.html` prints them, but nothing checks the card
-  against the database at runtime. Delete the rows (or let a name get
-  registered first) and the sign-in screen keeps advertising credentials that
-  will not work until the boot log tells you why. An endpoint serving the
-  current state would close it, at the cost of an API that returns passwords.
+- **The demo card is only checked at boot.** `server/src/demo.ts` seeds the
+  rows and `client/index.html` prints them, but nothing compares the two when
+  the page is served. The seeder runs before `listen()`, so on a fresh
+  database the card is true from the first request; what no request can catch
+  is a row changed afterwards — a manually replaced hash, or a password-change
+  feature added later — where the boot log's warning naming the account is the
+  only signal. An endpoint serving the current state would close it, at the
+  cost of an API that returns passwords.
 - **No refresh tokens.** A 1-hour expiry means re-login; the `jti` and ticket
   plumbing would extend to refresh tokens without structural change.
 
