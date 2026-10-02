@@ -35,7 +35,7 @@ ticket before connecting. See [WebSocket authentication](#websocket-authenticati
   reconnection with exponential backoff
 - **Security**: rate limiting, type-guarded input validation, single origin
   allowlist for CORS and the handshake, parameterized SQL
-- **Tests**: 89 unit and integration tests (plus 36 on the client), no mocking
+- **Tests**: 90 unit and integration tests (plus 36 on the client), no mocking
   of the database or the HTTP/WS stack
 - **Monitoring**: Winston (JSON in production), Sentry error tracking
 - **Graceful Shutdown**: closes sockets, flushes Sentry, then drains the pool
@@ -49,8 +49,10 @@ ticket before connecting. See [WebSocket authentication](#websocket-authenticati
   [inspo](https://github.com/Nutlope/inspo) archive — Linear as the archetype,
   corroborated by Bun, Algolia, Superlist, CodePen and Apple Developer, which
   independently agree on a near-black base, one contrasting accent, tight radii
-  and high-contrast monochrome type. Every colour pair is then checked against
-  WCAG by a script that runs in CI.
+  and high-contrast monochrome type. The token pairs that meet are then checked
+  against WCAG by a script that runs in CI. The list is enumerated rather than
+  derived from the stylesheet, so a new surface has to add its own pair to be
+  covered — the gate is explicit, not inferred.
 - **The favicon is the app's own mark, not a default.** `client/favicon.svg`
   redraws the speech bubble from the sign-in screen as a filled silhouette on
   the accent tile — the stroked header version loses its dots below ~32px. SVG
@@ -152,7 +154,7 @@ websocket/
 │   │   ├── utils.test.ts       # Unit: validation + sanitize
 │   │   ├── tickets.test.ts     # Unit: ticket issue/consume/expiry
 │   │   ├── origins.test.ts     # Unit: allowlist parsing + rejection
-│   │   ├── demo.test.ts        # Unit: published credentials vs validators
+│   │   ├── demo.test.ts        # Unit: demo credentials + boot order
 │   │   └── integration.test.ts # Real HTTP + WS against real Postgres
 │   ├── scripts/
 │   │   ├── test-db.mjs         # Throwaway Postgres for tests
@@ -839,6 +841,11 @@ duplicate. The values are published in the client by design — they gate no
 privilege and are ordinary rows in `users`. If you delete them, delete the
 card in `client/index.html` in the same change.
 
+The sequence that makes the card trustworthy — schema, then seed, then port —
+is pinned in the same file as a source gate: `server/src/index.ts` binds a real
+process and so carries no other tests, and the ordering is a property of that
+source rather than of anything observable from outside.
+
 ### Dockerfile
 
 `server/Dockerfile`, verbatim:
@@ -932,7 +939,7 @@ npm run test:db:down  # stop the throwaway container
 npm run typecheck
 ```
 
-**89 server tests + 36 client tests.** Node's built-in runner (`node --test`) —
+**90 server tests + 36 client tests.** Node's built-in runner (`node --test`) —
 no test framework dependency.
 
 | Suite | Tests | Covers |
@@ -940,7 +947,7 @@ no test framework dependency.
 | `utils.test.ts` | 16 | Validation bounds, type guards, sanitizer |
 | `tickets.test.ts` | 9 | Issue, consume, single-use, expiry, sweep |
 | `origins.test.ts` | 20 | Allowlist parsing, normalisation, rejection |
-| `demo.test.ts` | 2 | Published credentials clear the API's validators |
+| `demo.test.ts` | 3 | Published credentials clear the API's validators, boot order |
 | `integration.test.ts` | 42 | Real HTTP + WebSocket against real Postgres |
 | `client/client.test.mjs` | 36 | Response bodies, failure wording, host rules, markup gates |
 
@@ -973,7 +980,7 @@ elsewhere with `TEST_DATABASE_URL`.
 
 ```bash
 npm run check            # both gates, from the repo root
-npm run check:contrast   # WCAG AA over every colour pair, both themes
+npm run check:contrast   # WCAG AA over the listed pairs, both themes
 npm run check:render     # render.yaml against Render's published schema
 ```
 
@@ -1108,7 +1115,7 @@ against a real deployment, not asserted.
 - ✅ Rate limiting
 - ✅ Error monitoring (Sentry), debug route disabled in production
 - ✅ Structured logging (Winston)
-- ✅ 89 unit + integration tests, 36 client tests
+- ✅ 90 unit + integration tests, 36 client tests
 
 ### Known Gaps
 
