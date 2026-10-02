@@ -111,14 +111,14 @@
     async function fetchWithTimeout(url, options = {}, timeoutMs = 10_000) {
         const controller = new AbortController();
         let timedOut = false;
+        // No unref: the deadline always fires, so the call always settles by
+        // the deadline at the latest and never holds the loop open past it.
+        // (An unref'd timer plus a hung fetch drains the event loop, which
+        // cancels every test queued behind it under node:test.)
         const timer = setTimeout(() => {
             timedOut = true;
             controller.abort();
         }, timeoutMs);
-        // Node only: a pending deadline must never hold the test runner open.
-        if (typeof timer === "object" && typeof timer.unref === "function") {
-            timer.unref();
-        }
         try {
             return await fetch(url, { ...options, signal: controller.signal });
         } catch (error) {
