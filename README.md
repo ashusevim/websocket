@@ -35,10 +35,11 @@ ticket before connecting. See [WebSocket authentication](#websocket-authenticati
   reconnection with exponential backoff
 - **Security**: rate limiting, type-guarded input validation, single origin
   allowlist for CORS and the handshake, parameterized SQL
-- **Tests**: 90 unit and integration tests (plus 36 on the client), no mocking
+- **Tests**: 91 unit and integration tests (plus 36 on the client), no mocking
   of the database or the HTTP/WS stack
 - **Monitoring**: Winston (JSON in production), Sentry error tracking
-- **Graceful Shutdown**: closes sockets, flushes Sentry, then drains the pool
+- **Graceful Shutdown**: closes sockets, flushes Sentry, then drains the pool,
+  under a 10s deadline so a stuck socket cannot defer the work to SIGKILL
 - **Production Ready**: multi-stage Docker image (non-root), health check,
   idempotent schema, Render deploy config
 
@@ -155,7 +156,8 @@ websocket/
 │   │   ├── tickets.test.ts     # Unit: ticket issue/consume/expiry
 │   │   ├── origins.test.ts     # Unit: allowlist parsing + rejection
 │   │   ├── demo.test.ts        # Unit: demo credentials + boot order
-│   │   └── integration.test.ts # Real HTTP + WS against real Postgres
+│   │   ├── integration.test.ts # Real HTTP + WS against real Postgres
+│   │   └── shutdown.test.ts    # Real process: SIGTERM with a chat open
 │   ├── scripts/
 │   │   ├── test-db.mjs         # Throwaway Postgres for tests
 │   │   └── run-integration.mjs # Test runner wrapper
@@ -644,25 +646,38 @@ invalidate them, while verification stays cheap. Each login carries a unique
 ### Graceful Shutdown
 
 ```typescript
-async function gracefulShutdown() {
-    logger.info('Received shutdown signal...');
-    
-    server.close((err) => {           // 1. Stop accepting HTTP
-        wss.close(() => {              // 2. Close WebSocket server
-            Sentry.close(2000).then(() => {  // 3. Flush monitoring
-                pool.end(() => {        // 4. Close database
-                    process.exit(0);    // 5. Exit cleanly
-                });
-            });
-        });
-    });
-    
-    setTimeout(() => process.exit(1), 10000); // Force exit timeout
+async function gracefulShutdown(): Promise<void> {
+    if (shuttingDown) return;            // SIGINT and SIGTERM can both arrive
+    shuttingDown = true;
+
+    // Force-exit if the graceful path wedges. Without it, a client holding a
+    // socket open would keep the process alive until the platform's SIGKILL,
+    // which is exactly what skips the flush and the drain below.
+    setTimeout(() => {
+        logger.error('Shutdown did not finish in time, exiting anyway');
+        process.exit(1);
+    }, 10_000).unref();
+
+    await shutdown();                    // 1. terminate WS clients, close listener
+    await Sentry.close(2000);            // 2. flush monitoring
+    await pool.end();                    // 3. release the pool
+    logger.info('Graceful shutdown complete.');
+    process.exit(0);
 }
 
-process.on('SIGINT', gracefulShutdown);
-process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', () => void gracefulShutdown());
+process.on('SIGTERM', () => void gracefulShutdown());
 ```
+
+**The order is the whole bug.** `server.close()` resolves only once every
+connection it is tracking has ended, and upgraded WebSocket sockets are still
+counted by it. Awaiting it *before* terminating the clients therefore waits for
+connections that only `shutdown()` can close — and `shutdown()` is never
+reached. Nobody connected exited cleanly, which is how it went unnoticed; one
+open chat hung the process until SIGKILL, silently skipping the Sentry flush
+and the pool drain this function exists for. `shutdown.test.ts` starts the
+real entrypoint, opens a chat, signals it the way a platform does, and fails
+on either a hang or a non-zero exit.
 
 ### Real-time User Presence
 
@@ -939,7 +954,7 @@ npm run test:db:down  # stop the throwaway container
 npm run typecheck
 ```
 
-**90 server tests + 36 client tests.** Node's built-in runner (`node --test`) —
+**91 server tests + 36 client tests.** Node's built-in runner (`node --test`) —
 no test framework dependency.
 
 | Suite | Tests | Covers |
@@ -948,7 +963,8 @@ no test framework dependency.
 | `tickets.test.ts` | 9 | Issue, consume, single-use, expiry, sweep |
 | `origins.test.ts` | 20 | Allowlist parsing, normalisation, rejection |
 | `demo.test.ts` | 3 | Published credentials clear the API's validators, boot order |
-| `integration.test.ts` | 42 | Real HTTP + WebSocket against real Postgres |
+| `integration.test.ts` | 43 | Real HTTP + WebSocket against real Postgres |
+| `shutdown.test.ts` | 1 | SIGTERM with a chat open still exits cleanly |
 | `client/client.test.mjs` | 36 | Response bodies, failure wording, host rules, markup gates |
 
 The client suite runs from the repo root and covers response-body handling,
@@ -1028,6 +1044,16 @@ Each of these was a real bug, and each has a test that fails without the fix:
   whole document, and browsers report that as a missing image rather than a
   parse error, so nothing appeared in the console. The suite now parses the
   comment bodies, checks the icon link, and pins the tile colour to `--accent`.
+- **A live chat wedged the shutdown** — `gracefulShutdown()` awaited
+  `server.close()` before tearing down the WebSockets, but `close()` resolves
+  only once every connection it tracks has ended and upgraded sockets are
+  still counted by it. With nobody connected it exited cleanly, which is why
+  it survived every prior test; with one chat open it waited for sockets only
+  `shutdown()` could close, and `shutdown()` never ran. The process hung until
+  SIGKILL, skipping the Sentry flush and the pool drain the function exists
+  for. `shutdown.test.ts` starts the real entrypoint, opens a chat, signals it
+  the way a platform does, and fails on a hang *or* on a non-zero exit — the
+  10s deadline turns the hang into the latter.
 
 Not every regression belongs in the server suite. **The Blueprint rejected on
 deploy** — `render.yaml` declared `type: db` under `databases`, a key that does
@@ -1115,7 +1141,7 @@ against a real deployment, not asserted.
 - ✅ Rate limiting
 - ✅ Error monitoring (Sentry), debug route disabled in production
 - ✅ Structured logging (Winston)
-- ✅ 90 unit + integration tests, 36 client tests
+- ✅ 91 unit + integration tests, 36 client tests
 
 ### Known Gaps
 
