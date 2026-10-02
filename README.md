@@ -1108,7 +1108,7 @@ against a real deployment, not asserted.
 - ✅ Rate limiting
 - ✅ Error monitoring (Sentry), debug route disabled in production
 - ✅ Structured logging (Winston)
-- ✅ 89 unit + integration tests (`npm test`), 36 client tests
+- ✅ 89 unit + integration tests, 36 client tests
 
 ### Known Gaps
 
