@@ -35,8 +35,8 @@ ticket before connecting. See [WebSocket authentication](#websocket-authenticati
   reconnection with exponential backoff
 - **Security**: rate limiting, type-guarded input validation, single origin
   allowlist for CORS and the handshake, parameterized SQL
-- **Tests**: 91 server tests (48 unit + 43 integration) plus 73 client tests
-  (68 fast, 5 in Chrome), no mocking of the database or the HTTP/WS stack
+- **Tests**: 91 server tests (48 unit + 43 integration) plus 81 client tests
+  (76 fast, 5 in Chrome), no mocking of the database or the HTTP/WS stack
 - **Monitoring**: Winston (JSON in production), Sentry error tracking
 - **Graceful Shutdown**: closes sockets, flushes Sentry, then drains the pool,
   under a 10s deadline so a stuck socket cannot defer the work to SIGKILL
@@ -776,7 +776,10 @@ Two things to know about the free plan:
 
 - **Instances sleep after ~15 minutes idle** and are restarted roughly monthly.
   The first request after a sleep takes 30–60 seconds while the instance wakes.
-  The client's exponential-backoff reconnect handles the WebSocket side.
+  The client assumes this: API calls fail fast after 10s instead of hanging,
+  and the reconnect starts ~1s out, doubles with jitter to 30s, and only stops
+  when the server answers 401 (a dead session) rather than on any failed
+  ticket exchange.
 - **The database sleeps too** and can be unavailable for a minute after a long
   idle period. The server now refuses to start without a working database
   connection rather than serving 500s, so a cold start either succeeds or
@@ -958,7 +961,7 @@ npm run test:db:down  # stop the throwaway container
 npm run typecheck
 ```
 
-**91 server tests (48 unit + 43 integration) + 68 client tests + 5 browser
+**91 server tests (48 unit + 43 integration) + 76 client tests + 5 browser
 contrast tests.** Node's built-in runner (`node --test`) — no test framework
 dependency.
 
@@ -970,7 +973,7 @@ dependency.
 | `demo.test.ts` | 3 | Published credentials clear the API's validators, boot order |
 | `integration.test.ts` | 43 | Real HTTP + WebSocket against real Postgres |
 | `shutdown.test.ts` | *in the 43* | SIGTERM with a chat open still exits cleanly — `run-integration.mjs` runs it after the suite above |
-| `client/client.test.mjs` | 36 | Response bodies, failure wording, host rules, markup gates |
+| `client/client.test.mjs` | 44 | Response bodies, request deadlines, reconnect and render budgets, markup gates |
 | `client/contrast.test.mjs` | 32 | Colour parsing, compositing, WCAG maths, thresholds, scoring, coverage |
 | `client/browser/contrast-gate.test.mjs` | 5 | The gate end to end in real Chrome, positive and negative controls |
 
@@ -1194,7 +1197,7 @@ against a real deployment, not asserted.
 - ✅ Rate limiting
 - ✅ Error monitoring (Sentry), debug route disabled in production
 - ✅ Structured logging (Winston)
-- ✅ 91 server tests, 68 client tests, 5 browser contrast tests
+- ✅ 91 server tests, 76 client tests, 5 browser contrast tests
 
 ### Known Gaps
 
@@ -1207,7 +1210,9 @@ Stated plainly, because knowing these is part of the design:
   per-user upsert to stay small, so it does not grow without bound, but there is
   no scheduled cleanup of rows older than the JWT lifetime.
 - **No message persistence.** Chat is broadcast only; a message is gone once
-  delivered. There is no history to load on reconnect.
+  delivered. There is no history to load on reconnect. The client additionally
+  keeps only the newest 200 messages in the DOM, so a long session never slows
+  its own layout.
 - **The demo card is only checked at boot.** `server/src/demo.ts` seeds the
   rows and `client/index.html` prints them, but nothing compares the two when
   the page is served. The seeder runs before `listen()`, so on a fresh

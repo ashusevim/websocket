@@ -722,6 +722,36 @@ describe("WebSocket messaging", () => {
             conn.close();
         }
     });
+
+    // The limiter counts every frame, not just valid chat: without the
+    // increment-first order a flood of garbage would never trip it.
+    test("disconnects a client that floods faster than 20 messages per 10s", async () => {
+        await makeUser();
+        const ticket = await getTicket();
+        const conn = connect(`?ticket=${ticket}`);
+
+        try {
+            await expectOpen(conn.ws);
+
+            const closed = new Promise<number>((resolve, reject) => {
+                const timer = setTimeout(
+                    () => reject(new Error("flooder was not disconnected")),
+                    5000,
+                );
+                conn.ws.once("close", (code: number) => {
+                    clearTimeout(timer);
+                    resolve(code);
+                });
+            });
+            for (let i = 0; i < 25; i++) {
+                conn.ws.send(JSON.stringify({ type: "chat", message: `flood ${i}` }));
+            }
+
+            assert.equal(await closed, 1008, "expected a policy-violation close");
+        } finally {
+            conn.close();
+        }
+    });
 });
 
 /*

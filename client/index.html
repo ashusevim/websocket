@@ -480,8 +480,29 @@
         let username = '';
         let token = '';
         let shouldReconnect = true;
-        let reconnectionInterval = 5000;
+        // First retry after ~1s, not 5: a dropped connection is usually a
+        // blip, and five seconds of dead UI on every blip is the slowest
+        // thing in this client. Doubles per attempt to 30s so a server that
+        // is actually down does not get hammered.
+        let reconnectionInterval = 1000;
         const maxReconnectionInterval = 30000;
+
+        /**
+         * Full jitter on the backoff. Without it every client dropped by the
+         * same deploy retries on the same doubling schedule and arrives back
+         * as one thundering herd.
+         */
+        function currentBackoff() {
+            return Math.random() * reconnectionInterval;
+        }
+
+        function scheduleNextBackoff() {
+            reconnectionInterval = Math.min(reconnectionInterval * 2, maxReconnectionInterval);
+        }
+
+        function resetBackoff() {
+            reconnectionInterval = 1000;
+        }
 
         /* =====================================================================
            Elements
@@ -524,11 +545,35 @@
             return clean.slice(0, 2).toUpperCase();
         }
 
+        // Whether the view is pinned to the latest message. Maintained on
+        // scroll events — which fire for user scrolls, not per message — so
+        // the hot path below never pays for a layout read it does not use.
+        let stickToBottom = true;
+        messageList.addEventListener('scroll', () => {
+            const gap = messageList.scrollHeight - messageList.scrollTop - messageList.clientHeight;
+            stickToBottom = gap < 120;
+        }, { passive: true });
+
         function scrollToLatest(behavior = 'auto') {
+            // Skipped outright when the user has scrolled up: no yank, and no
+            // scrollHeight read in the message hot path.
+            if (!stickToBottom) return;
             messageList.scrollTo({
                 top: messageList.scrollHeight,
                 behavior: reduceMotion ? 'auto' : behavior,
             });
+        }
+
+        // Bound the DOM. Every message used to stay as its own <li> forever,
+        // so a long session grew the list without limit and each layout pass
+        // cost more than the last. 200 keeps ample scrollback while layout
+        // stays flat.
+        const MAX_MESSAGES = 200;
+
+        function trimMessages() {
+            while (messageList.childElementCount > MAX_MESSAGES) {
+                messageList.firstElementChild?.remove();
+            }
         }
 
         /* =====================================================================
@@ -599,6 +644,7 @@
 
             row.append(avatar, body);
             messageList.appendChild(row);
+            trimMessages();
             scrollToLatest('smooth');
         }
 
@@ -610,6 +656,7 @@
             li.className = 'announcement';
             li.textContent = text;
             messageList.appendChild(li);
+            trimMessages();
             scrollToLatest('smooth');
         }
 
@@ -859,7 +906,7 @@
 
         async function Register(usernameValue, password) {
             try {
-                const response = await fetch(`${apiProtocol}://${serverHost}/register`, {
+                const response = await ChatAPI.fetchWithTimeout(`${apiProtocol}://${serverHost}/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username: usernameValue, password }),
@@ -895,7 +942,7 @@
 
         async function Login(usernameValue, password) {
             try {
-                const response = await fetch(`${apiProtocol}://${serverHost}/login`, {
+                const response = await ChatAPI.fetchWithTimeout(`${apiProtocol}://${serverHost}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username: usernameValue, password }),
@@ -921,7 +968,7 @@
                 token = data.token;
                 username = usernameValue;
                 shouldReconnect = true;
-                reconnectionInterval = 5000;
+                resetBackoff();
 
                 lastSender = null;
                 messageList.replaceChildren();
@@ -947,7 +994,7 @@
         async function Logout() {
             try {
                 if (token) {
-                    await fetch(`${apiProtocol}://${serverHost}/logout`, {
+                    await ChatAPI.fetchWithTimeout(`${apiProtocol}://${serverHost}/logout`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ token }),
@@ -983,7 +1030,7 @@
          * seconds and is destroyed on first use.
          */
         async function fetchTicket(jwt) {
-            const response = await fetch(`${apiProtocol}://${serverHost}/ws-ticket`, {
+            const response = await ChatAPI.fetchWithTimeout(`${apiProtocol}://${serverHost}/ws-ticket`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -993,7 +1040,12 @@
 
             if (!response.ok) {
                 const data = (await ChatAPI.readJSON(response)) ?? {};
-                throw new Error(data.message || 'Could not authorise connection');
+                const failure = new Error(data.message || 'Could not authorise connection');
+                // Carried so connect() can tell a dead session (401: stop
+                // retrying) from a sick network (anything else: keep backing
+                // off). Without it every ticket failure looks like expiry.
+                failure.status = response.status;
+                throw failure;
             }
 
             const data = await ChatAPI.readJSON(response);
@@ -1008,10 +1060,23 @@
             try {
                 ticket = await fetchTicket(jwt);
             } catch (error) {
-                // A rejected ticket means the session is gone (expired or
-                // signed out). Retrying would just loop, so stop and surface it.
-                setStatus(false, 'Session expired');
-                shouldReconnect = false;
+                // 401 means the session is actually gone — expired, revoked,
+                // signed with a rotated secret. Retrying would just loop, so
+                // stop and surface it. Anything else is the network or a
+                // sleeping instance, which heals: the old code stopped on
+                // those too, so one failed fetch during a flap left the user
+                // staring at "Session expired" with a valid session.
+                if (error && typeof error === 'object' && error.status === 401) {
+                    setStatus(false, 'Session expired');
+                    shouldReconnect = false;
+                    return;
+                }
+                setStatus(false);
+                if (!shouldReconnect) return;
+                setTimeout(() => {
+                    if (shouldReconnect) connect(jwt, name);
+                }, currentBackoff());
+                scheduleNextBackoff();
                 return;
             }
 
@@ -1019,7 +1084,7 @@
             socket = new WebSocket(wsUrl);
 
             socket.onopen = () => {
-                reconnectionInterval = 5000;
+                resetBackoff();
                 setStatus(true);
                 messageBox.focus();
             };
@@ -1063,9 +1128,9 @@
 
                 setTimeout(() => {
                     if (shouldReconnect) connect(jwt, name);
-                }, reconnectionInterval);
+                }, currentBackoff());
 
-                reconnectionInterval = Math.min(reconnectionInterval * 2, maxReconnectionInterval);
+                scheduleNextBackoff();
             };
         }
 

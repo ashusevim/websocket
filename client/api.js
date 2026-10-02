@@ -91,6 +91,45 @@
     }
 
     /**
+     * fetch with a deadline.
+     *
+     * The API lives on a free-tier instance that sleeps after idle: the first
+     * request after a sleep takes 30-60s while it wakes, and a dead connection
+     * hangs forever. Without a timeout the sign-in button spins indefinitely
+     * on both. 10s fails fast enough to retry (the wake takes longer than any
+     * healthy response) while never firing on a normal call.
+     *
+     * A timeout surfaces as an Error naming the deadline, not an AbortError:
+     * describeFailure passes unknown Errors through verbatim, so the user
+     * would otherwise read "This operation was aborted".
+     *
+     * @param {string} url
+     * @param {object} [options] fetch options (no signal: the deadline owns it)
+     * @param {number} [timeoutMs]
+     * @returns {Promise<Response>}
+     */
+    async function fetchWithTimeout(url, options = {}, timeoutMs = 10_000) {
+        const controller = new AbortController();
+        let timedOut = false;
+        const timer = setTimeout(() => {
+            timedOut = true;
+            controller.abort();
+        }, timeoutMs);
+        // Node only: a pending deadline must never hold the test runner open.
+        if (typeof timer === "object" && typeof timer.unref === "function") {
+            timer.unref();
+        }
+        try {
+            return await fetch(url, { ...options, signal: controller.signal });
+        } catch (error) {
+            if (timedOut) throw new Error(`Request timed out after ${timeoutMs}ms`);
+            throw error;
+        } finally {
+            clearTimeout(timer);
+        }
+    }
+
+    /**
      * Rejections `fetch` produces when nothing was ever reached.
      *
      * These are the strings the three engines emit for a network or CORS
@@ -154,5 +193,5 @@
         return "Cannot reach the server. Check your connection.";
     }
 
-    scope.ChatAPI = { readJSON, resolveServerHost, describeFailure };
+    scope.ChatAPI = { readJSON, resolveServerHost, describeFailure, fetchWithTimeout };
 })(typeof globalThis !== "undefined" ? globalThis : this);
