@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Contrast fixture — everything clears</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!--
+      The control: readable text, plus one deliberately low-contrast chip
+      that is aria-hidden. The chip is below the text floor but exempt, so
+      the run must exit 0 while still printing it in its own section — an
+      exemption that fails the gate would be useless, and one that vanished
+      from the report would be invisible.
+    -->
+    <p class="readable">perfectly readable</p>
+    <span class="chip" aria-hidden="true">A</span>
+</body>
+</html>

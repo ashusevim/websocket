@@ -1,0 +1,22 @@
+/* Three colour-bearing rules, all exercised, all either passing or
+   legitimately exempt. This is the fixture the reporter must exit 0 on. */
+
+body {
+    margin: 0;
+    padding: 16px;
+    background: #111113;
+    color: #f4f4f5;
+}
+
+.readable {
+    color: #f4f4f5;
+}
+
+/* ~1.4:1 — decorative, aria-hidden, reported but not failed. */
+.chip {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 2px 6px;
+    background: #24242e;
+    color: #3a3a46;
+}

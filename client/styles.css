@@ -17,8 +17,11 @@
    coloured glows. That is the opposite of this reference set, and it is why
    this file looks deliberately austere.
 
-   Colour tokens: every pair is computed by client/scripts/check-contrast.mjs,
-   which runs in CI. Do not hand-edit a colour without re-running it.
+   Colour tokens: every ink/background/border/focus combination that this
+   file actually produces is measured by client/scripts/check-contrast.mjs —
+   it loads the page into real Chrome, drives every view and state, and
+   reports what was painted. It runs in CI. Do not hand-edit a colour
+   without re-running it.
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
@@ -100,11 +103,15 @@
     --text-faint: #6b6b76;
 
         /* A darker bronze in light mode: the gold is far too light to carry
-           text on white. */
+           text on white. `--accent-ink` sits one step below `--accent` because
+           it is the one that has to clear 4.5:1 as text, including on top of
+           its own wash — 4.72:1 on the wash over `--surface`, 4.88:1 on
+           `--bg`, 4.59:1 on `--surface-2`. `#8a6d1f` managed 4.42:1 on the
+           wash, which is how "you" in the roster failed the gate. */
     --accent: #8a6d1f;
     --accent-dim: #6f5718;
     --on-accent: #fffdf5;
-    --accent-ink: #8a6d1f;
+    --accent-ink: #84691d;
     --accent-wash: rgba(138, 109, 31, 0.08);
     --accent-line: rgba(138, 109, 31, 0.34);
 

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Contrast fixture — one pair below the text floor</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!--
+      Everything else on this page clears 4.5:1. The paragraph below is the
+      one deliberate failure: #777777 on #808080 is about 1.13:1. The gate
+      must exit non-zero and name exactly that pair, and must fail on the
+      contrast check alone — both colour-bearing rules here are exercised.
+    -->
+    <p class="bad">barely there</p>
+</body>
+</html>
