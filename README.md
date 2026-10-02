@@ -35,8 +35,8 @@ ticket before connecting. See [WebSocket authentication](#websocket-authenticati
   reconnection with exponential backoff
 - **Security**: rate limiting, type-guarded input validation, single origin
   allowlist for CORS and the handshake, parameterized SQL
-- **Tests**: 91 unit and integration tests (plus 36 on the client), no mocking
-  of the database or the HTTP/WS stack
+- **Tests**: 91 server tests (48 unit + 43 integration) plus 73 client tests
+  (68 fast, 5 in Chrome), no mocking of the database or the HTTP/WS stack
 - **Monitoring**: Winston (JSON in production), Sentry error tracking
 - **Graceful Shutdown**: closes sockets, flushes Sentry, then drains the pool,
   under a 10s deadline so a stuck socket cannot defer the work to SIGKILL
@@ -958,8 +958,9 @@ npm run test:db:down  # stop the throwaway container
 npm run typecheck
 ```
 
-**91 server tests + 68 client tests + 5 browser contrast tests.** Node's
-built-in runner (`node --test`) — no test framework dependency.
+**91 server tests (48 unit + 43 integration) + 68 client tests + 5 browser
+contrast tests.** Node's built-in runner (`node --test`) — no test framework
+dependency.
 
 | Suite | Tests | Covers |
 |-------|-------|--------|
@@ -968,7 +969,7 @@ built-in runner (`node --test`) — no test framework dependency.
 | `origins.test.ts` | 20 | Allowlist parsing, normalisation, rejection |
 | `demo.test.ts` | 3 | Published credentials clear the API's validators, boot order |
 | `integration.test.ts` | 43 | Real HTTP + WebSocket against real Postgres |
-| `shutdown.test.ts` | 1 | SIGTERM with a chat open still exits cleanly |
+| `shutdown.test.ts` | *in the 43* | SIGTERM with a chat open still exits cleanly — `run-integration.mjs` runs it after the suite above |
 | `client/client.test.mjs` | 36 | Response bodies, failure wording, host rules, markup gates |
 | `client/contrast.test.mjs` | 32 | Colour parsing, compositing, WCAG maths, thresholds, scoring, coverage |
 | `client/browser/contrast-gate.test.mjs` | 5 | The gate end to end in real Chrome, positive and negative controls |
@@ -1193,7 +1194,7 @@ against a real deployment, not asserted.
 - ✅ Rate limiting
 - ✅ Error monitoring (Sentry), debug route disabled in production
 - ✅ Structured logging (Winston)
-- ✅ 91 unit + integration tests, 36 client tests
+- ✅ 91 server tests, 68 client tests, 5 browser contrast tests
 
 ### Known Gaps
 
